@@ -1,0 +1,109 @@
+This section introduces the numerical formulation and physical models of LESGO and provides a brief overview of the OpenACC programming model.
+
+\subsection{Pseudo-spectral LES formulation}
+\label{sec:bg-numerics}
+
+LESGO solves the filtered incompressible Navier--Stokes equations in
+rotational form for high-Reynolds-number ABL flow,
+%
+\begin{equation}
+\frac{\partial \tilde{u}_i}{\partial t}
++ \tilde{u}_j\!\left(\frac{\partial \tilde{u}_i}{\partial x_j}
+- \frac{\partial \tilde{u}_j}{\partial x_i}\right)
+= -\frac{\partial \tilde{p}^{*}}{\partial x_i}
+- \frac{\partial \tau_{ij}}{\partial x_j}
++ f_i ,
+\label{eq:les}
+\end{equation}
+%
+where $\tilde{u}_i$ is the filtered velocity, $\tilde{p}^{*}$ is the 
+modified pressure, $\tau_{ij}$ is the subgrid-scale (SGS) stress tensor, 
+and $f_i$ represents body forces, including turbine forcing. The horizontal 
+directions are periodic and discretized using Fourier collocation, whereas 
+vertical derivatives are evaluated with second-order centered finite 
+differences on a staggered grid. Dealiasing of nonlinear terms via the $3/2$ 
+rule~\cite{orszag1971} requires forward and inverse FFTs across all velocity 
+and vorticity components on a $3/2$-padded grid at every time step. 
+Time integration employs a second-order Adams--Bashforth scheme, with
+incompressibility enforced by a fractional-step projection. The pressure 
+Poisson equation is diagonalized by 2D horizontal FFTs, yielding independent 
+1D tridiagonal systems along $z$ for each horizontal wavenumber pair. At 
+the lower boundary, an equilibrium log-law stress model~\cite{moeng1984} 
+(or optionally an integral wall model~\cite{yang2015iwm}) closes the boundary 
+condition. 
+
+Consequently, FFT-based differentiation, dealiased products, and the spectral 
+Poisson solve render the computational profile heavily FFT-dominated, 
+in contrast to finite-difference atmospheric codes where FFTs are confined to 
+the pressure solve~\cite{esclapez2025dales,vanheerwaarden2017}.
+Prior GPU accelerations for such FFT-heavy solvers rely on CUDA Fortran,
+including ports of finite-difference codes such as CaNS~\cite{costa2018,costa2021}  
+and AFiD~\cite{zhu2018afid}, or custom asynchronous redesigns of 
+pseudo-spectral codes~\cite{ravikumar2019}.
+
+\subsection{Dynamic SGS and actuator-line turbine models}
+\label{sec:bg-physics}
+
+Two physics components dominate both the scientific fidelity and the
+computational complexity of wind-farm LES in LESGO.
+
+\textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} An eddy
+viscosity closes the SGS stress in Eq.~\ref{eq:les}. The model computes
+its coefficient dynamically~\cite{germano1991}, averages it along
+fluid-particle trajectories~\cite{meneveau1996}, and recovers scale
+dependence through a second test
+filter~\cite{porteagel2000,bouzeid2005}. Each
+coefficient update applies two spectral test filters to nine tensor
+fields (requiring batched 2-D FFTs across all vertical levels) and
+advects four accumulator fields along particle back-trajectories via
+trilinear interpolation. As the accuracy backbone of LESGO for
+heterogeneous ABL flows, this model relies on an irregular memory access
+pattern that intertwines filtering, history tracking, and interpolation.
+Consequently, mapping this formulation to GPUs presents distinct
+challenges compared to conventional local closures that rely
+primarily on stencil operations~\cite{esclapez2025dales}, and it
+has no counterpart in prior directive-based LES ports.
+
+\textbf{Actuator-line turbine model (ATM).} Each turbine blade is
+represented by discrete actuator points that sample the local LES
+velocity via trilinear interpolation, look up tabulated airfoil
+aerodynamic polars, and project the resulting forces back onto the grid
+through a Gaussian convolution kernel~\cite{sorensen2002,martinez2015}.
+Simulating multi-turbine farms introduces thousands of moving, off-grid
+coupling points that interact with the flow field twice per time step
+during velocity sampling and force projection (Section~\ref{sec:opt-atm}). 
+Prior GPU-accelerated wind-farm simulation frameworks have largely 
+focused on the ExaWind stack~\cite{sharma2024exawind,mullowney2021,kuhn2025amrwind}, 
+which comprises second-order finite-volume codes tailored for 
+geometry-resolved engineering simulations of finite wind farms. 
+In contrast, LESGO addresses a distinct physical regime. Its 
+pseudo-spectral discretization introduces zero numerical dissipation, 
+enabling turbulence spectra, wake-recovery entrainment, and 
+farm-boundary-layer interactions to be resolved without scheme-induced 
+contamination. Furthermore, its horizontally periodic formulation 
+directly models the fully developed wind-farm boundary layer that 
+forms the foundation for atmospheric parameterizations. 
+
+\subsection{GPU acceleration with OpenACC}
+\label{sec:bg-openacc}
+
+Early GPU acceleration efforts in atmospheric modeling relied either on 
+converting select kernels to CUDA~\cite{michalakes2008,norman2015} or 
+on complete solver rewrites~\cite{schalkwijk2012,vanheerwaarden2017}. 
+In contrast, directive-based porting has emerged as the practical 
+standard for legacy Fortran codebases~\cite{lapillonne2014,govett2017nim,giorgetta2022,esclapez2025dales,otero2019nek}.
+OpenACC offloads execution by annotating loop nests with directives
+(\texttt{parallel loop}), without altering the underlying source language.
+Directives such as \texttt{create} and \texttt{copyin}/\texttt{copyout} 
+handle explicit allocation and data movement, \texttt{update} synchronizes 
+data on demand, and \texttt{declare create} maintains array residency 
+throughout the program lifetime. Kernels compiled with \texttt{default(present)} 
+enforce that operand arrays are already resident on the device.
+Additionally, the \texttt{async} clause maps operations to asynchronous 
+queues to overlap kernel execution, transfers, and library calls, 
+with \texttt{wait} clauses ensuring correct data dependency ordering.
+
+Although offloading individual compute loops via OpenACC follows 
+well-established conventions, systematically managing data movement 
+across a complex multiphysics solver remains the dominant performance 
+bottleneck, which we address in Section~\ref{sec:method}.

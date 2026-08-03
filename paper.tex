@@ -1,0 +1,163 @@
+\documentclass[conference]{IEEEtran}
+
+% \AtBeginDocument{%
+% \providecommand\BibTeX{{%
+%     Bib\TeX}}}
+
+% \setcopyright{acmlicensed}
+% \copyrightyear{2025}
+% \acmYear{2025}
+% \acmDOI{XXXXXXX.XXXXXXX}
+% \acmConference[SC '25]{ACM/IEEE International Conference for High Performance Computing, Networking, Storage and Analysis}{November 16--21, 2025}{St.~Louis, MO}
+% \acmISBN{978-1-4503-XXXX-X/2018/06}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\usepackage{cite}
+\usepackage{array}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage[table]{xcolor}
+
+\usepackage{booktabs}
+\IfFileExists{tagging.sty}{\usepackage{tagging}}{}
+\IfFileExists{ipdps26repro.sty}{\usepackage{ipdps26repro}}{}
+% \usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{listings}
+\IfFileExists{ctable.sty}{\usepackage{ctable}}{}
+\IfFileExists{subfigure.sty}{\usepackage{subfigure}}{}
+\definecolor{dkgreen}{RGB}{0,64,0}
+\definecolor{ltgray}{RGB}{245,245,245}
+\definecolor{mauve}{RGB}{139,0,139}
+
+\lstset{ %
+    language=[90]Fortran,           % the language of the code
+    basicstyle=\footnotesize\tt,    % the size of the fonts that are used for the code
+    numbers=left,                   % where to put the line-numbers
+    numberstyle=\tiny\tt,           % the style that is used for the line-numbers
+    stepnumber=1,                   % the step between two line-numbers. If it's 1, each line
+                                    % will be numbered
+    numbersep=5pt,                  % how far the line-numbers are from the code
+    backgroundcolor=\color{ltgray}, % choose the background color. You must add \usepackage{color}
+    showspaces=false,               % show spaces adding particular underscores
+    showstringspaces=false,         % underline spaces within strings
+    showtabs=false,                 % show tabs within strings adding particular underscores
+    frame=single,                   % adds a frame around the code
+    rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. commens (green here))
+    tabsize=2,                      % sets default tabsize to 2 spaces
+    captionpos=b,                   % sets the caption-position to bottom
+    breaklines=true,                % sets automatic line breaking
+    breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+%  title=\lstname,                % show the filename of files included with \lstinputlisting;
+%                                  % also try caption instead of title
+    keywordstyle=\color{blue},          % keyword style
+    commentstyle=\color{dkgreen},       % comment style
+    stringstyle=\color{mauve},         % string literal style
+}
+
+\definecolor{myblue}{RGB}{53, 121, 139}
+\definecolor{mygray}{RGB}{240, 255, 240}
+
+% Stage-tag colors for Algorithm 1 (text-contrast variants of the
+% fig_stagescale palette).
+% Stage colors match the fig_stagescale palette (text-darkened hues):
+% Pressure=vermillion, SGS=blue, Derivatives=green, Turbines=purple,
+% Projection=rose, Other=orange. Convection has no bar (gray).
+\definecolor{stgderiv}{RGB}{0,122,89}    % derivatives  (green)
+\definecolor{stgsgs}{RGB}{0,102,160}     % SGS          (blue)
+\definecolor{stgconv}{RGB}{100,100,100}  % convection   (gray)
+\definecolor{stgturb}{RGB}{128,0,128}    % turbines     (purple)
+\definecolor{stgpress}{RGB}{178,72,0}    % pressure     (vermillion)
+\definecolor{stgproj}{RGB}{204,102,153}  % projection   (rose)
+\definecolor{stgother}{RGB}{150,102,0}   % other        (orange)
+% Colored lead words for the time-step walkthrough (Section II).
+\newcommand{\stagelead}[2]{{\sffamily\bfseries\color{#1}#2}}
+% Right-margin section pointer inside Algorithm 1.
+\newcommand{\algptr}[2]{\hfill\mbox{\footnotesize\color{#1}\S\ref{#2}}}
+
+
+\newcommand{\fix}[1]{\textcolor[rgb]{0.0,0.0,1.0}{#1}}
+\newcommand{\tweakedsim}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$}}
+
+% Placeholder box for figures that are not yet generated.
+\newcommand{\figplaceholder}[1]{%
+  \fbox{\parbox[c][4.5cm][c]{0.92\linewidth}{\centering\footnotesize\fix{#1}}}}
+
+\begin{document}
+
+\title{Accelerating Production-Scale Wind-Farm Large-Eddy Simulation on GPUs}
+
+% \author{\IEEEauthorblockN{Cunyang Wei}
+% \IEEEauthorblockA{\textit{Department of Computer Science}\\
+% \textit{University of Maryland}\\
+% College Park, Maryland 20742 USA\\
+% cunyang@umd.edu
+% }
+% \and
+% \IEEEauthorblockN{Abhinav Bhatele}
+% \IEEEauthorblockA{\textit{Department of Computer Science}\\
+% \textit{University of Maryland}\\
+% College Park, Maryland 20742 USA\\
+% bhatele@cs.umd.edu
+% }
+% }
+
+% \renewcommand{\shortauthors}{Wei et al.}
+
+\maketitle
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+\begin{IEEEkeywords}
+large-eddy simulation, GPU acceleration, \mbox{OpenACC}, 
+wind energy, pseudo-spectral methods
+\end{IEEEkeywords}
+
+\section{Introduction}
+\label{sec:intro}
+\input{intro}
+
+\section{Background}
+\label{sec:bg}
+\input{bg}
+
+\section{Baseline Implementation and Motivation}
+\label{sec:motivation}
+\input{baseline}
+
+\section{Data Residency Methodology}
+\label{sec:method}
+\input{method}
+
+\section{Optimizing Coupling-Heavy Components}
+\label{sec:opt}
+\input{opt}
+
+\section{Experimental Setup}
+\label{sec:setup}
+\input{setup}
+
+\section{Results and Analysis}
+\label{sec:results}
+\input{results}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\input{conc}
+
+% \section*{Acknowledgment}
+% \input{ack}
+
+\bibliographystyle{IEEEtran}
+\bibliography{./bib/cite,./bib/pssg}
+
+\end{document}

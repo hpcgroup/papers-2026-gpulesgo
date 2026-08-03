@@ -1,0 +1,20 @@
+Large-eddy simulation (LES) is the reference tool for wind-farm
+aerodynamics because it resolves energy-carrying turbulence in the
+atmospheric boundary layer directly rather than modeling it. LESGO is a
+widely used open-source solver for this regime built on pseudo-spectral
+methods, which carry minimal numerical dissipation and deliver high
+accuracy per grid point. 
+Its CPU implementation, however, suffers from poor parallel scalability,
+severely constraining the grid resolution and physical
+integration times of production-scale wind-farm simulations.
+To enable production-scale runs, we present the first GPU port of LESGO. 
+For this class of pseudo-spectral multiphysics solver with recurring
+host--device coupling, data movement rather than kernel throughput governs
+overall performance. We analyze all host--device coupling points across the
+solver and classify them into four treatments. On this
+foundation, we design custom GPU formulations for coupling-heavy physics
+and numerical components, including a chunk-pipelined distributed
+tridiagonal Poisson solver, a batched multi-turbine actuator-line model,
+batched-FFT Lagrangian dynamic subgrid-scale filtering, and CPU--GPU
+heterogeneous execution.
+Evaluation on a 472-million-cell, 60-turbine wind farm demonstrates a $32\times$ speedup over a best-performing CPU baseline and strong scaling up to 128 GPUs on a 1.36-billion-cell grid.

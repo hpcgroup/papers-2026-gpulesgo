@@ -1,0 +1,14 @@
+code/
+figs/__pycache__/
+paper.aux
+paper.bbl
+paper.blg
+paper.fls
+paper.fdb_latexmk
+paper.log
+paper.out
+paper.pdf
+paper.synctex.gz
+paper.toc
+paper.lof
+paper.lot

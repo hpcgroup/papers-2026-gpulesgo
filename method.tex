@@ -1,0 +1,212 @@
+This section presents our GPU porting approach, followed by our 
+fine-grained data-management strategy designed to minimize host--device 
+data movement.
+
+\subsection{Porting Approach}
+\label{sec:method-approach}
+
+We ported LESGO using OpenACC directives with the NVHPC compiler and
+bound batched cuFFT spectral transforms to the same CUDA streams as the
+OpenACC kernels. We chose compiler directives over a low-level CUDA
+rewrite because LESGO is an extensive, physics-validated codebase
+actively maintained by user community extending the Fortran source.
+Directive-based offloading preserves a single source tree in which the
+CPU build remains reproducible and acts as our correctness reference.
+This approach also aligns with established porting practices in
+scientific computing, as demonstrated across atmospheric fluid
+models~\cite{esclapez2025dales,lapillonne2014,govett2017nim} and other
+production Fortran codebases~\cite{otero2019nek,caplan2019mas}.
+
+The computational pattern across the code is uniform. The solver state
+consists of dozens of persistent 3D Fortran arrays of $O(N^3)$ size,
+including velocity components, velocity gradients, subgrid-scale (SGS)
+stresses, and dealiased spectral scratch fields. Nearly every kernel
+sweeps these fields with a triple-nested loop. While this uniformity
+simplifies compute offloading, it heightens the penalty for poor data
+placement because any unnecessary host--device synchronization transfers
+$O(N^3)$ bytes.
+
+\subsection{Data-Movement Bottlenecks}
+\label{sec:method-problem}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figs/fig_datamove.pdf}
+\caption{Time-step breakdown under the baseline data-placement strategies. (a)~Mirroring leaves the GPU 94\% idle on the reference case. (b)~Explicit residency runs the production case $7.9\times$ faster than managed memory.}
+\label{fig:datamove}
+\end{figure}
+
+We now quantify the limitations of the two dominant data-placement
+strategies in directive-based ports. Figure~\ref{fig:datamove}
+summarizes both measurements.
+
+\textbf{Array Mirroring.} Our reference baseline configuration 
+($256^3$ grid with two wind turbines on 4 A100 GPUs) adopts array 
+mirroring, the conventional strategy in directive-based 
+ports~\cite{esclapez2025dales,giorgetta2022}. 
+This approach mirrors host arrays on the device and synchronizes 
+them at module boundaries so that unported host code receives 
+updated state. However, \texttt{Nsight Systems} 
+profiling reveals that only 13\,ms of a 220\,ms time step is attributed to
+GPU execution. PCIe transfers and host-side synchronization account for 
+the remaining 207\,ms, which keeps the GPU \textbf{94\% idle}
+(Fig.~\ref{fig:datamove}a). The primary bottleneck is a full-field
+synchronization of twelve $O(N^3)$ arrays (420\,MB per step). 
+Furthermore, array mirroring allocates unnecessary device memory, 
+which consumes valuable GPU memory resources and reduces usability.
+
+\textbf{CUDA Managed Memory.} Managed memory minimizes initial porting
+effort and underpins Fortran standard-parallelism
+offloading~\cite{caplan2023dc}, making it an attractive default for
+directive-based ports. However, evaluating CUDA managed memory
+(\texttt{-gpu=mem:managed}) on the production benchmark
+(Section~\ref{sec:setup}) across 16 A100 GPUs yields limited acceleration
+(Fig.~\ref{fig:datamove}b). Using \texttt{nsys} profiling, we found that
+extensive page faults and data migration overheads inherent to
+demand-paged unified memory~\cite{chien2019um} severely stall execution.
+
+These performance gaps demonstrate that for complex multiphysics solvers
+with heterogeneous coupling points, default data-placement strategies
+are insufficient. Achieving high GPU efficiency requires fine-grained,
+structure-aware control over data residency and host--device transfer
+footprints.
+
+\subsection{Consumer-Driven Explicit Residency}
+\label{sec:method-taxonomy}
+
+\begin{table*}[t]
+\centering
+\caption{Taxonomy of host--device coupling points in a pseudo-spectral
+multiphysics LES solver and the data-residency strategies that resolve each class. Naive costs are measured
+per step on the reference configuration [R] or the production case
+[P].}
+\label{tab:taxonomy}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\rowcolors{2}{gray!12}{white}
+\begin{tabular}{@{}
+  >{\raggedright\arraybackslash}p{0.8in}
+  >{\raggedright\arraybackslash}p{2.35in}
+  >{\raggedright\arraybackslash}p{1.05in}
+  >{\raggedright\arraybackslash}p{2.25in}@{}}
+\toprule
+Class & Instance in LESGO & Naive cost per step & Treatment \\
+\midrule
+Boundary plane & wall-stress model reads $u,v,w$ at the walls &
+full fields, 420\,MB [R] & \emph{slice} to wall planes, later
+\emph{relocate} (\S\ref{sec:opt-atm}) \\
+Conditional & velocity gradients read by the CPU SGS fallback only &
+9 fields, 315\,MB [R] & \emph{gate} on the SGS model choice \\
+Spectral mode & pressure zero-wavenumber recurrence (serial in $z$) &
+3 full-field round trips [R] & \emph{slice} to the DC column
+($\sim$1\,KB) \\
+Stale entry & \texttt{copyin} of pressure at solver entry &
+34\,MB [R] & \emph{slice} to a seeded ghost plane via \texttt{create} \\
+Pipeline state & time integration and projection read $u,v,w$, RHS &
+210\,MB [R] & \emph{relocate}, keep the update pipeline
+device-resident \\
+Actuator & blade sampling and force projection & 2 full-field
+crossings [P] & \emph{relocate}, exchange $O(\text{blade points})$
+(\S\ref{sec:opt-atm}) \\
+Diagnostics & energy, divergence, checkpoint writes & 765\,MB on
+sampled steps [P] & \emph{relocate} reductions, \emph{gate} output
+steps \\
+Serial chain & tridiagonal Thomas chains spanning ranks &
+host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
+(\S\ref{sec:opt-tridag}) \\
+Host physics & tabulated airfoil polar lookups & serialized 28\,ms
+[P] & \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Our port keeps device memory as the primary copy of
+every solver field throughout execution, and host routines touch
+solver state only at \emph{coupling points}. 
+The substance of our strategy is how each coupling point is
+treated. We size its transfer by the spatial footprint the host
+routine actually accesses. 
+We first enforced persistent device residency directly in the source
+code. All persistent solver arrays are declared device-resident at
+module scope (\texttt{!\$acc declare create}), making residency a
+structural property of the data structures. Every GPU kernel asserts
+data presence (\texttt{default(present)}). This eliminates routine data
+movement and exposes all coupling points for systematic optimization.
+
+We then examined every coupling point, categorizing its spatial extent
+(scalar, 1D column, 2D boundary plane, or 3D subvolume), temporal
+frequency (per step, periodic, or model-conditional), and access intent
+(read-only, write-only, or read-modify-write). This audit revealed that
+all coupling points belong to the nine recurring classes listed in
+Table~\ref{tab:taxonomy}. To minimize or eliminate host--device data
+movement, each class is addressed using one of four targeted strategies:
+\emph{Gate}, \emph{Relocate}, \emph{Slice}, and \emph{Overlap}.
+\emph{Gate} exploits temporal frequency, skipping the transfer whenever a
+conditional or low-frequency consumer does not execute.
+\emph{Relocate} ports the consumer routine directly to the GPU,
+eliminating the coupling point entirely whenever the routine parallelizes well.
+\emph{Slice} applies when relocation is not viable, such as when the consumer is
+inherently serial, branches irregularly, or performs host-only I/O.
+In these cases, the routine stays on the host and the transfer shrinks to
+the minimal footprint actually touched.
+\emph{Overlap} serves as the final treatment for irreducible transfers,
+hiding them behind concurrent GPU execution.
+
+Each row in Table~\ref{tab:taxonomy} summarizes one class, its specific
+instance in LESGO, the cost incurred by a naive port, and our
+corresponding optimization. Every reduction is justified by a static
+code property, such as consumer loop bounds, write-before-read
+ordering, or execution guards. To illustrate how these strategies are applied, we present an example below. Although the instances
+reflect LESGO, these classes recur across pseudo-spectral multiphysics
+codes, providing a general porting checklist for similar solvers.
+
+\begin{lstlisting}[caption={Structure-aware partial transfer for the
+  pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
+  synchronization (top).},label={lst:dc}]
+  ! naive: 3 full-field round trips / step
+  !$acc update self(p)        ! 34 MB
+  call dc_recurrence(p)       ! touches DC column only
+  !$acc update device(p)      ! 34 MB
+  
+  ! residency treatment: O(1) traffic
+  !$acc update self(rH_z(1:2,1,:))  !input column, 1KB
+  call dc_recurrence_column(p_col)
+  !$acc update device(p(1:2,1,:))  !output column, 1KB
+  \end{lstlisting}
+\begin{lstlisting}[caption={Structure-aware partial transfer for the
+pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
+synchronization (top).},label={lst:dc}]
+! naive: 3 full-field round trips / step
+!$acc update self(p)        ! 34 MB
+call dc_recurrence(p)       ! touches DC column only
+!$acc update device(p)      ! 34 MB
+
+! residency treatment: O(1) traffic
+!$acc update self(rH_z(1:2,1,:))  !input column, 1KB
+call dc_recurrence_column(p_col)
+!$acc update device(p(1:2,1,:))  !output column, 1KB
+\end{lstlisting}
+  
+
+Consider the spectral special mode from Table~\ref{tab:taxonomy}
+(Listing~\ref{lst:dc}). As detailed in
+Section~\ref{sec:bg-numerics}, horizontal FFTs reduce the pressure
+Poisson equation to independent tridiagonal systems in $z$ for each
+horizontal Fourier mode, and the GPU solves all $N^2-1$ non-zero modes
+as a single batched system. The zero-wavenumber (DC) mode is singular
+and is instead closed by a first-order vertical recurrence. This
+recurrence is serial in $z$ and involves only $O(N)$ operations, so a
+GPU would execute it slower than a single CPU core, and it remains on
+the host. This split matches the slice scenario identified above,
+where the compute-intensive batched solve stays on the GPU, the
+CPU-friendly serial recurrence stays on the host, and the transfer
+shrinks to the consumer footprint.
+The naive port bracketed this lightweight host
+computation with full 3D field transfers, resulting in three 34\,MB
+round trips per step. The slice instead transfers only the
+$\sim$1\,KB input column to the host, evaluates the exact same
+recurrence, and pushes the $\sim$1\,KB output column back to the GPU.
+
+Profiling confirms the effectiveness of this design. On the 472M-cell
+production benchmark, \texttt{nsys} shows that no $O(N^3)$ array crosses
+the host--device interconnect during steady-state time marching. 

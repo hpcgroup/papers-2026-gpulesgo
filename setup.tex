@@ -1,0 +1,32 @@
+\textbf{Platforms.} GPU experiments run on NERSC Perlmutter, where each
+GPU node has four NVIDIA A100 GPUs on a Slingshot-11 interconnect, 
+with NVHPC 25.5, CUDA \fix{xx}, cuFFT \fix{xx}, 
+and CUDA-aware Cray MPICH \fix{xx}. Portability experiments use NCSA
+Delta nodes with eight NVIDIA H200 GPUs. CPU baselines run on the 
+Perlmutter's CPU nodes (AMD EPYC 7763), with the same source tree.
+
+\textbf{Cases.} The production case (``wf60'') is a 60-turbine wind
+farm of NREL 5-MW reference turbines~\cite{jonkman2009} in a
+$10\times6$ array with $7D$ streamwise and $5D$ spanwise spacing
+($D=126$\,m), in a $28.2 \times 3.8 \times 2.0$\,km domain discretized
+by $3072\times384\times400 \approx 472$M grid points, with the LASD SGS
+model, equilibrium wall model, and actuator-line turbines.
+Strong-scaling experiments additionally run the same farm at 768 and
+1152 vertical levels (906M and 1.36B cells), refining the wall-layer
+and wake resolution. A
+$256^3$ two-turbine reference configuration supports the methodology
+measurements of Section~\ref{sec:method}, and weak-scaling experiments
+grow the vertical extent with rank count at fixed per-GPU work. CPU 
+We report speedup against the fastest CPU configuration. We also report 
+normalized throughput (ms per million cells per step). 
+
+\textbf{Verification.}  \fix{[Physics-comparison figure
+and data to be supplied from the production science run.]}
+
+\begin{figure}[h]
+\centering
+\figplaceholder{GPU vs.\ CPU physics validation}
+\caption{Statistical validation of the GPU port against the CPU
+reference.}
+\label{fig:physics}
+\end{figure}

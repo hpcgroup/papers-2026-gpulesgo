@@ -1,0 +1,63 @@
+We situate this work along three lines of related research, GPU ports
+of atmospheric and turbulent-flow LES, porting practice for large
+simulation codes at scale, and GPU wind-farm simulation.
+
+\textbf{GPU ports of atmospheric and turbulent-flow LES.} Early
+weather and climate GPU work converted selected kernels to
+CUDA~\cite{michalakes2008,norman2015} or rewrote solvers outright
+(GALES~\cite{schalkwijk2012}, MicroHH~\cite{vanheerwaarden2017}), and
+directive-based ports later became the pragmatic default for large
+Fortran code
+bases~\cite{lapillonne2014,giorgetta2022,xia2015,govett2017nim,otero2019nek,devanna2023uranos}.
+The closest work to ours is the OpenACC port of
+DALES~\cite{esclapez2025dales}, a finite-difference atmospheric LES
+code that mirrors the entire host memory on the device and validates
+statistically. Our work differs in the data strategy, since we
+measure both mirroring and managed memory on our own code and show
+that each leaves order-of-magnitude performance behind for a
+pseudo-spectral solver, in the physics ported, since a
+scale-dependent Lagrangian dynamic SGS model and multi-turbine
+actuator coupling have no counterpart in prior directive-based LES
+ports, and in the evaluation, through production-scale strong scaling
+and machine-precision validation. On the FFT-based side,
+CaNS~\cite{costa2018,costa2021} and AFiD~\cite{zhu2018afid} brought
+FFT-based finite-difference DNS to GPUs as CUDA Fortran ports of
+their CPU code bases, extreme-scale pseudo-spectral turbulence has
+been driven by an asynchronous CUDA Fortran
+redesign~\cite{ravikumar2019}, and adaptive pencil
+decompositions~\cite{romero2022} address the transpose bottleneck we
+avoid by construction with slabs.
+
+\textbf{Porting simulation codes to GPUs at scale.} Porting studies of
+AMR-based codes~\cite{davis2023crocco,myers2021,katz2020} established
+the now-standard experience-paper elements (version-progression
+evaluation, profiling-driven diagnosis, and packaged insights) and
+consistently find communication dominating after kernel speedup, and
+our analysis follows that format. Single-GPU LBM grid
+refinement~\cite{mahmoud2024lbm} shows, as we do, that the gap
+between a correct port and an efficient one is architectural. At
+scale, the cross-rank solves become the pressure point. Manycore
+batch tridiagonal solvers~\cite{laszlo2016} and the distributed
+PaScaL\_TDMA library~\cite{kim2021pascal} scale through reduced
+interface systems, while the chunk pipeline of
+Section~\ref{sec:opt-tridag} preserves the Thomas arithmetic
+unchanged and with it the machine-precision validation protocol.
+
+\textbf{GPU wind-farm LES.} The exascale wind-energy stack around
+ExaWind~\cite{sharma2024exawind}, comprising
+Nalu-Wind~\cite{mullowney2021} and AMR-Wind~\cite{kuhn2025amrwind},
+targets GPU wind-farm simulation with finite-volume formulations,
+AMR-Wind designed for GPUs from the outset and the unstructured
+Nalu-Wind re-engineered for them. LESGO
+offers what that stack does not. Its pseudo-spectral formulation
+carries spectral accuracy per grid point with little numerical
+dissipation, its scale-dependent Lagrangian closure is the reference
+SGS model for heterogeneous ABL physics, and two decades of
+validation studies and an active user community stand behind its
+results~\cite{bouzeid2005,calaf2010}. The price is a legacy CPU code
+base, so the relevant problem is porting in place. No prior work
+brings an existing pseudo-spectral wind-farm LES code to production
+GPU scale in place, and none measures what the two common
+directive-port data strategies leave behind. This paper closes both
+gaps with the first GPU port of LESGO and the first directive-based
+GPU LES with actuator-line wind-farm coupling at this scale.
