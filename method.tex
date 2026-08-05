@@ -161,19 +161,6 @@ reflect LESGO, these classes recur across pseudo-spectral multiphysics
 codes, providing a general porting checklist for similar solvers.
 
 \begin{lstlisting}[caption={Structure-aware partial transfer for the
-  pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
-  synchronization (top).},label={lst:dc}]
-  ! naive: 3 full-field round trips / step
-  !$acc update self(p)        ! 34 MB
-  call dc_recurrence(p)       ! touches DC column only
-  !$acc update device(p)      ! 34 MB
-  
-  ! residency treatment: O(1) traffic
-  !$acc update self(rH_z(1:2,1,:))  !input column, 1KB
-  call dc_recurrence_column(p_col)
-  !$acc update device(p(1:2,1,:))  !output column, 1KB
-  \end{lstlisting}
-\begin{lstlisting}[caption={Structure-aware partial transfer for the
 pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
 synchronization (top).},label={lst:dc}]
 ! naive: 3 full-field round trips / step
