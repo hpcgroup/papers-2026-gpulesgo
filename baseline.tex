@@ -4,6 +4,24 @@ the CPU implementation that motivate our GPU acceleration strategy.
 
 \subsection{Structure of a Time Step}
 
+
+LESGO follows a conventional time-marching structure. The solver
+state comprises the three filtered velocity components of Eq.~\ref{eq:les},
+held on the slab-decomposed grid (Section~\ref{sec:bg-impl}). Each
+pass of the main time loop in Algorithm~\ref{alg:step} executes three 
+primary phases: (1)~assembling the right-hand-side (RHS) convective, 
+turbulent, and boundary force terms (lines 3--15), (2)~advancing the 
+velocity to an intermediate state via second-order
+Adams--Bashforth integration (line 16), and (3)~enforcing incompressibility 
+through a Poisson pressure solve and velocity projection step (lines 17--21). 
+\texttt{Initialize()} allocates grid arrays, creates FFT plans, and sets up 
+turbine geometry at startup, while \texttt{Finalize()} outputs final diagnostics 
+and checkpoints. Inside the loop, \texttt{ComputeDt()} dynamically evaluates 
+the time step according to the Courant--Friedrichs--Lewy (CFL) stability 
+condition, requiring a global \texttt{MPI\_Allreduce} collective across all ranks.
+Below, we describe the execution flow of a single time step in detail.
+
+
 \label{sec:step}
 \begin{algorithm}[h]
 \caption{The main time loop of LESGO.}
@@ -34,22 +52,6 @@ the CPU implementation that motivate our GPU acceleration strategy.
 \STATE Finalize()
 \end{algorithmic}
 \end{algorithm}
-
-LESGO follows a conventional time-marching structure. The solver
-state comprises the three filtered velocity components of Eq.~\ref{eq:les},
-held on the slab-decomposed grid (Section~\ref{sec:bg-impl}). Each
-pass of the main time loop in Algorithm~\ref{alg:step} executes three 
-primary phases: (1)~assembling the right-hand-side (RHS) convective, 
-turbulent, and boundary force terms (lines 3--15), (2)~advancing the 
-velocity to an intermediate state via second-order
-Adams--Bashforth integration (line 16), and (3)~enforcing incompressibility 
-through a Poisson pressure solve and velocity projection step (lines 17--21). 
-\texttt{Initialize()} allocates grid arrays, creates FFT plans, and sets up 
-turbine geometry at startup, while \texttt{Finalize()} outputs final diagnostics 
-and checkpoints. Inside the loop, \texttt{ComputeDt()} dynamically evaluates 
-the time step according to the Courant--Friedrichs--Lewy (CFL) stability 
-condition, requiring a global \texttt{MPI\_Allreduce} collective across all ranks.
-Below, we describe the execution flow of a single time step in detail.
 
 \stagelead{stgderiv}{Derivatives} (lines 4--5). Evaluating the RHS
 terms of Eq.~\ref{eq:les} requires velocity gradients, since the SGS
