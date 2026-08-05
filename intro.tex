@@ -26,6 +26,13 @@ capturing long physical integration times, this performance ceiling
 directly limits the accessible physical scales. Porting the solver to 
 GPUs provides a natural path to overcome this  scalability barrier.
 
+\begin{figure}[t]
+    \centering
+    \figplaceholder{diagram from the production science run}
+    \caption{production simulation. }
+    \label{fig:}
+\end{figure}
+
 Porting large Fortran solvers to GPUs with compiler directives such as
 OpenACC is by now well established across weather and climate
 models~\cite{lapillonne2014,govett2017nim,norman2015,giorgetta2022,esclapez2025dales},
@@ -94,7 +101,7 @@ coupling-heavy modules, introducing a chunk-pipelined distributed
 tridiagonal solver, a batched multi-turbine actuator-line model,
 batched-FFT dynamic SGS filtering, and CPU--GPU heterogeneous execution.
 \item We evaluate the port at production scale on a 472M-cell,
-60-turbine wind farm, achieving a $32\times$ speedup (up to $35\times$
+60-turbine wind farm, achieving a $32\times$ speedup (up to $57\times$
 under dynamic subgrid-scale evaluation) over the fastest CPU baseline.
 We demonstrate scaling up to 128 GPUs on a 1.36 billion-cell grid. 
 \end{itemize}

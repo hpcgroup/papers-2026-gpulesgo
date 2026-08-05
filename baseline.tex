@@ -145,14 +145,16 @@ vertical solve.
 On CPU architectures, this design encounters severe scaling limits.
 Figure~\ref{fig:ceiling} evaluates the strong scaling of the production
 wind-farm case, which simulates 60 turbines on a 472M-cell grid
-($3072 \times 384 \times 400$), on perlmutter compute node each 
-with 64-core AMD EPYC 7763 (Milan) CPUs.
-As shown in Figure~\ref{fig:ceiling}, increasing the CPU count from 
-20 to 40 cores yields virtually no performance improvement. 
-Even when scaling out across 4 nodes to 200 CPU cores, 
-where the 1D slab decomposition reaches its structural 
-limit of two vertical planes per rank, the execution time plateaus at 5.09\,s 
-per step. At this scaling ceiling, accumulating converged turbulence statistics
+($3072 \times 384 \times 400$), on Perlmutter CPU nodes with
+two 64-core AMD EPYC 7763 (Milan) CPUs each.
+As shown in Figure~\ref{fig:ceiling}, the bandwidth-bound solver
+saturates a node near 40 of its 128 cores (9.68\,s per step), and
+packing 100 ranks onto the same node is counterproductive (11.4\,s).
+Scaling out helps only weakly. Two nodes at 200 ranks reach 7.29\,s,
+and four nodes at 400 ranks, where the 1D slab decomposition reaches
+its structural limit of one vertical plane per rank, plateau at
+5.11\,s per step.
+At this scaling ceiling, accumulating converged turbulence statistics
 requires running hundreds of thousands of time steps. As a result, a single
 production simulation takes several hours to days to complete, making
 large-scale wind-farm studies computationally impractical. This significant

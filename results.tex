@@ -17,21 +17,21 @@ CPU baseline (Fig.~\ref{fig:ceiling}).}
 \toprule
 Configuration & s/step & vs.\ CPU \\
 \midrule
-CPU, fastest configuration (200 ranks)  & 5.09 & 1.0$\times$ \\
+CPU, fastest configuration (400 ranks)  & 5.11 & 1.0$\times$ \\
 Explicit residency (\S\ref{sec:method-taxonomy})
                                        & 1.280 & 4.0$\times$ \\
 \;+ actuator-line model on device (\S\ref{sec:opt-atm})
-                                       & 0.557 & 9.1$\times$ \\
+                                       & 0.557 & 9.2$\times$ \\
 \;+ chunk-pipelined tridiag.\ solve (\S\ref{sec:opt-tridag})
-                                       & 0.294 & 17.3$\times$ \\
+                                       & 0.294 & 17.4$\times$ \\
 \;+ batched actuator-line model (\S\ref{sec:opt-atm})
-                                       & 0.186 & 27.4$\times$ \\
+                                       & 0.186 & 27.5$\times$ \\
 \;+ heterogeneous overlap (\S\ref{sec:opt-overlap})
                                        & \textbf{0.157} & \textbf{32$\times$} \\
 \midrule
-CPU, 200 ranks, with LASD cadence       & \fix{TBD} & 1.0$\times$ \\
+CPU, 400 ranks, with LASD cadence       & 11.24 & 1.0$\times$ \\
 Final GPU build, with LASD cadence (\S\ref{sec:opt-lasd})
-                                        & 0.196 & $\approx$35$\times$ \\
+                                        & 0.196 & \textbf{57$\times$} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -58,8 +58,7 @@ CPU configuration. The LASD update (\S\ref{sec:opt-lasd}) fires only every fifth
 at production cadence, so its acceleration appears at full cadence
 in the bottom rows of the table rather than inside the per-step
 progression. With the model active, step time rises to 0.196\,s
-while the speedup widens to $\approx$35$\times$, since the CPU pays
-proportionally more for the same physics.
+while the speedup widens to $57\times$.
 These results demonstrate that our fine-grained data management
 methodology and the component optimizations are individually
 effective and complementary.
@@ -71,12 +70,12 @@ Table~\ref{tab:finalmetrics} profiles execution metrics for the final
 build. The GPU remains active for 93\% of
 total time step duration, memory transfer volumes confirm zero $O(N^3)$
 PCIe data movement during steady-state time marching, and dominant
-kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:sol}).
+kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:roofline}).
 
 \begin{table}[h]
 \centering
 \caption{Execution profile of the final port on the production case
-(16$\times$A100, \texttt{nsys}/\texttt{ncu}, one time step).}
+(16$\times$A100, \texttt{nsys}/\texttt{ncu}, per step).}
 \label{tab:finalmetrics}
 \footnotesize
 \begin{tabular}{@{}lr@{}}
@@ -84,11 +83,9 @@ kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:sol}).
 Metric & Value \\
 \midrule
 GPU busy fraction & 93\% \\
-Host-to-device memcpy volume & \fix{TBD} \\
-Device-to-host memcpy volume & \fix{TBD} \\
-Memcpy call count & \fix{TBD} \\
-Kernel launches & \fix{TBD} \\
-Stream synchronizations & \fix{TBD} \\
+Sustained DRAM bandwidth & 1.5\,TB/s per GPU (73\% of peak) \\
+Host-to-device memcpy volume & 1.6\,MB \\
+Device-to-host memcpy volume & 2.0\,MB \\
 DRAM bandwidth of dominant kernels & 67--88\% of peak \\
 \bottomrule
 \end{tabular}
@@ -151,42 +148,40 @@ batching thousands of small launches (Section~\ref{sec:opt-atm} and
 Section~\ref{sec:opt-lasd}), and the pipeline latency floor represents
 the physical limit of serial vertical operations (Section~\ref{sec:opt-tridag}).
 Because computational kernels operate near peak DRAM bandwidth
-(Fig.~\ref{fig:sol}), remaining overheads are governed by hardware
+(Fig.~\ref{fig:roofline}), remaining overheads are governed by hardware
 interconnect and host runtime latencies.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\linewidth]{figs/fig_sol.pdf}
-\caption{Nsight Compute speed-of-light utilization of every kernel in
-one production step (16$\times$A100, rank 0). Point area is
-proportional to each kernel's share of profiled time.}
-\label{fig:sol}
+\includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
+\caption{Roofline of the production-step kernel on Perlmutter.}
+\label{fig:roofline}
 \end{figure}
 
 Nsight Compute profiling demonstrates that every major kernel
 operates near the hardware's memory-bandwidth roof
-(Fig.~\ref{fig:sol}). Custom field kernels achieve 67--88\% of peak DRAM
+(Fig.~\ref{fig:roofline}). Custom field kernels achieve 67--88\% of peak DRAM
 bandwidth at 24--37\% of peak compute throughput, while batched cuFFT
-kernels reach 48--81\% of peak memory bandwidth. As expected for
-pseudo-spectral methods, overall performance is governed by GPU memory
-bandwidth.
+kernels reach 48--81\% of peak memory bandwidth. The residual gap on
+the largest transform is internal to the library kernel. 
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
-\caption{Weak scaling ($256\times256\times64$ points per GPU).}
+\caption{Weak scaling at three per-GPU loads on Perlmutter.}
 \label{fig:weakscaling}
 \end{figure}
 
-Weak scaling benchmarks on the reference setup (Fig.~\ref{fig:weakscaling},
-fixed at $256\times256\times64$ grid points per GPU) demonstrate 83\%
-parallel efficiency up to 32 GPUs (increasing from 39.5\,ms to 47.8\,ms
-per step) and 72\% efficiency at 64 GPUs (54.8\,ms per step). Stage
-profiling indicates that derivative evaluation, SGS modeling, and
-convection runtimes remain constant within 1\%, while pressure solve
-time increases moderately due to tridiagonal chain extension across
-deeper slab stacks. The 1D slab decomposition keeps all FFT transforms
-rank-local, avoiding all-to-all communication overheads.
+Weak scaling holds the per-GPU grid fixed while
+the vertical extent grows with rank count, as shown in Fig.~\ref{fig:weakscaling}. 
+At the production load of 29.5M cells per GPU the port sustains 90\%
+parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
+64 GPUs). As in
+strong scaling, heavier loads scale flatter. The only stage whose cost
+grows with rank count is the pressure solve, whose tridiagonal chains
+span the deepening slab stack; all other stages stay constant to three
+digits. The chunk pipeline of Section~\ref{sec:opt-tridag} contains
+this growth.
 
 While a 2D pencil decomposition could extend rank limits further, the
 1D slab structure fully satisfies our target physics. LESGO does not
@@ -205,41 +200,30 @@ codebase.
 \subsection{Portability and capacity}
 \label{sec:results-portability}
 
-\begin{table}[h]
-\centering
-\caption{Cross-hardware behavior of the production case (no retuning).
-A100 rows are Perlmutter, and H200 rows are NCSA Delta.}
-\label{tab:portability}
-\footnotesize
-\begin{tabular}{@{}lrrl@{}}
-\toprule
-GPU & s/step & Mcell/s/GPU \\
-\midrule
-16$\times$A100 & 0.157 & 188 \\
-8$\times$H200  & 0.250 & 236 \\
-\bottomrule
-\end{tabular}
-\end{table}
+% \begin{table}[h]
+% \centering
+% \caption{Cross-hardware behavior of the production case (no retuning).
+% A100 rows are Perlmutter, and H200 rows are NCSA Delta.}
+% \label{tab:portability}
+% \footnotesize
+% \begin{tabular}{@{}lrrl@{}}
+% \toprule
+% GPU & s/step & Mcell/s/GPU \\
+% \midrule
+% 16$\times$A100 & 0.157 & 188 \\
+% 8$\times$H200  & 0.250 & 236 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
 
-Table~\ref{tab:portability} evaluates solver portability across GPU
-hardware architectures without code retuning. Device memory capacity
-serves as the primary portability metric for pseudo-spectral workloads.
-The 472M-cell production case requires 16 A100 GPUs, whereas eight
-141\,GB H200 GPUs execute the same simulation with half the GPU count.
-Furthermore, H200 GPUs deliver a 26\% higher per-device throughput
-(236 versus 188 million cell updates per second per GPU) because
-halving the rank count doubles slab thickness and reduces inter-rank halo
-and pipeline communication. Consequently, GPU memory capacity directly
-enhances both simulation scale and computational efficiency in
-slab-decomposed spectral solvers.
-
-\subsection{Time to science}
-\label{sec:results-science}
-\fix{add science results here}
-
-\begin{figure}[h]
-\centering
-\figplaceholder{figure from the production science run}
-\caption{production simulation. }
-\label{fig:wake}
-\end{figure}
+% Table~\ref{tab:portability} evaluates solver portability across GPU
+% hardware architectures without code retuning. Device memory capacity
+% serves as the primary portability metric for pseudo-spectral workloads.
+% The 472M-cell production case requires 16 A100 GPUs, whereas eight
+% 141\,GB H200 GPUs execute the same simulation with half the GPU count.
+% Furthermore, H200 GPUs deliver a 26\% higher per-device throughput
+% (236 versus 188 million cell updates per second per GPU) because
+% halving the rank count doubles slab thickness and reduces inter-rank halo
+% and pipeline communication. Consequently, GPU memory capacity directly
+% enhances both simulation scale and computational efficiency in
+% slab-decomposed spectral solvers.
