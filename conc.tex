@@ -4,13 +4,12 @@ Fortran code. We demonstrated that porting such a legacy codebase
 requires a fine-grained data-management strategy. Therefore, we 
 identified four data-management operations, 
 and classified every host--device coupling point in LESGO
-into these solutions. In addition, we developed targeted kernel
-optimizations including a chunk-pipelined tridiagonal solver, a
-batched actuator-line model, batched-FFT dynamic subgrid-scale
-filtering, and CPU--GPU heterogeneous overlap, raising overall GPU
-utilization to 93\%. We believe these optimization principles extend
-beyond LESGO to broader multiphysics solvers. On a production-scale 
-benchmark, our GPU implementation delivers up to
+into these solutions. In addition, we demonstrated three
+optimizations, including chunk pipelining across serial rank chains,
+batching many small work items, and CPU--GPU heterogeneous overlap,
+raising overall GPU utilization to 93\%. We believe these
+optimizations extend beyond LESGO to broader multiphysics solvers. 
+On a production-scale benchmark, our GPU implementation delivers up to
 32$\times$ speedup over the fastest CPU baseline. Finally, we
 presented realistic physical simulation results to demonstrate the
 practical value and scientific impact of our porting effort for

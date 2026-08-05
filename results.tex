@@ -22,9 +22,9 @@ Explicit residency (\S\ref{sec:method-taxonomy})
                                        & 1.280 & 4.0$\times$ \\
 \;+ actuator-line model on device (\S\ref{sec:opt-atm})
                                        & 0.557 & 9.2$\times$ \\
-\;+ chunk-pipelined tridiag.\ solve (\S\ref{sec:opt-tridag})
+\;+ chunk pipelining (\S\ref{sec:opt-tridag})
                                        & 0.294 & 17.4$\times$ \\
-\;+ batched actuator-line model (\S\ref{sec:opt-atm})
+\;+ batching (\S\ref{sec:opt-atm})
                                        & 0.186 & 27.5$\times$ \\
 \;+ heterogeneous overlap (\S\ref{sec:opt-overlap})
                                        & \textbf{0.157} & \textbf{32$\times$} \\
@@ -144,8 +144,8 @@ at a fixed GPU count increases with problem size, directly benefiting
 production-scale simulations. This fixed latency term represents an
 essential algorithmic baseline. Global CFL reductions enforce adaptive
 time stepping correctness, mandatory kernel dispatches persist after
-batching thousands of small launches (Section~\ref{sec:opt-atm} and
-Section~\ref{sec:opt-lasd}), and the pipeline latency floor represents
+batching thousands of small launches (Section~\ref{sec:opt-atm}),
+and the pipeline latency floor represents
 the physical limit of serial vertical operations (Section~\ref{sec:opt-tridag}).
 Because computational kernels operate near peak DRAM bandwidth
 (Fig.~\ref{fig:roofline}), remaining overheads are governed by hardware

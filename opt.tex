@@ -1,12 +1,11 @@
-Beyond data movement overheads, several key computational kernels present
-structural bottlenecks when ported directly to GPUs. This section
-details our parallel optimizations for the four most time-consuming
-solver routines and concludes with porting practices that generalize
-beyond LESGO. Unless noted otherwise, all performance measurements
-correspond to the 472M-cell production case on 16 NVIDIA A100 GPUs
-(Section~\ref{sec:setup}).
+Beyond data movement overheads, structural bottlenecks arise when
+multiphysics kernels are ported directly to GPUs. This section presents
+three optimizations for those bottlenecks and 
+porting practices that generalize beyond this solver. Unless noted
+otherwise, all performance measurements correspond to the 472M-cell
+production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 
-\subsection{Chunk-pipelined distributed tridiagonal solve}
+\subsection{Chunk pipelining across serial rank chains}
 \label{sec:opt-tridag}
 
 \begin{figure}[h]
@@ -16,9 +15,9 @@ correspond to the 472M-cell production case on 16 NVIDIA A100 GPUs
 \label{fig:tridag}
 \end{figure}
 
-The spectral Poisson solve (\texttt{PoissonTridiag()} in
-Algorithm~\ref{alg:step}) reduces to independent 1D tridiagonal systems
-along $z$ for each horizontal wavenumber pair. This yields approximately
+In the spectral Poisson solve (\texttt{PoissonTridiag()} in
+Algorithm~\ref{alg:step}), independent 1D tridiagonal systems along $z$
+arise for each horizontal wavenumber pair. This yields approximately
 $590K$ independent systems of 400 unknowns, each distributed across
 all 16 ranks in 1D slab domain decomposition. Standard forward
 elimination and back substitution in the Thomas algorithm operate
@@ -32,54 +31,47 @@ arithmetic~\cite{laszlo2016,kim2021pascal}, our pipelined approach
 leaves the inner Thomas loops untouched, ensuring bit-exact equivalence
 with the sequential baseline. This chunk-pipelined solver achieves a
 $6.2\times$ speedup.
- 
-\subsection{Batched actuator-line model on the device}
+
+\subsection{Batching many small work items}
 \label{sec:opt-atm}
-
-Although relocating (Section~\ref{sec:method-problem}) the actuator-line 
-model (\texttt{Turbines()}) onto the GPU eliminates full-field data 
-transfers, relocation alone is insufficient at wind-farm scale. We 
-thus restructure the on-device computation.
-
-At wind-farm scale, the primary performance bottleneck is kernel launch 
-and communication overhead rather than arithmetic execution. Processing 
-turbines individually repeats device uploads, kernel launches, 
-synchronizations, and small collective reductions for each turbine, 
-accumulating over 1,000 \texttt{MPI\_Allreduce} operations per rank 
-every step. To eliminate this overhead, we batch the entire farm into 
-unified CUDA operations. Blade-point tables for all turbines reside 
-permanently in device memory, a single sampling kernel and projection 
-kernel process all concatenated turbine points, and reduction quantities 
-travel in a single packed \texttt{MPI\_Allreduce}, reducing per-step 
-kernel launch and collective call counts by an order of magnitude.
-Batching also revealed a critical system-wide insight: eliminating this 
-allocation churn accelerated all other GPU solver stages by 15--18\%. 
-Therefore, we also established static allocation. Every GPU module 
-allocates its device scratch buffers once upon initialization and 
-retains them throughout execution, eliminating memory allocation within 
-the time loop.
-
-\subsection{Lagrangian dynamic SGS on the device}
 \label{sec:opt-lasd}
 
+When work is fragmented into many undersized pieces, 
+per-piece kernel launches and collectives
+dominate performance, and fixed launch latency leaves the GPU
+underutilized. We therefore batch the fragments into fewer, larger device operations.
+
+Although relocating (Section~\ref{sec:method-problem}) the actuator-line
+model (\texttt{Turbines()}) onto the GPU eliminates full-field data
+transfers, relocation alone is insufficient at wind-farm scale.
+Processing turbines individually repeats device uploads, kernel
+launches, synchronizations, and small collective reductions for each
+turbine, accumulating over 1,000 \texttt{MPI\_Allreduce} operations per
+rank every step. We therefore batch the entire farm into unified device
+operations. Blade-point tables for all turbines reside permanently in
+device memory. A single sampling kernel and a single projection kernel
+process all concatenated turbine points, and all reduction quantities
+travel in one packed \texttt{MPI\_Allreduce}. Together, these changes
+cut per-step kernel launch and collective call counts by an order of
+magnitude. The same restructuring also removed repeated device
+allocations from the time loop. Eliminating that allocation churn
+accelerated all other GPU solver stages by 15--18\%, so we established
+static allocation as a global practice: every GPU module allocates its
+scratch buffers once at initialization and retains them for the run.
+
 The Lagrangian scale-dependent (LASD) subgrid-scale model
-(\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step})
-performs low-pass filtering and history tracking. Filtering
-requires smoothing nine 3D tensor fields at two test widths using
-forward 2D FFTs, wavenumber mode damping, and inverse 2D FFTs across
-every horizontal plane. History tracking interpolates four accumulator
-fields at the upstream departure point $x - u\,\Delta t$ for each grid
-node. A naive port issues thousands of single-plane 2D FFTs per update.
-Because an individual plane provides too little work to saturate the
-GPU, fixed cuFFT launch latencies rival transform times and starve the
-hardware between calls. We address this bottleneck by batching
-transforms along the vertical dimension. Promoting 2D scratch
-planes to 3D arrays enables a single batched cuFFT call to filter all
-vertical levels of a field at once.
-This multiplies parallel work per launch, saturates GPU execution
-units, and reduces thousands of launches to a few dozen. In addition,
-pathline interpolation collapses into three fused GPU kernels for the
-bottom boundary, interior, and top boundary.
+(\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) shows the
+same fragmentation in library form. Filtering smooths nine 3D tensor
+fields at two test widths with forward 2D FFTs, wavenumber mode damping,
+and inverse 2D FFTs across every horizontal plane. History tracking
+interpolates four accumulator fields at the upstream departure point
+$x - u\,\Delta t$ for each grid node. A naive port issues thousands of
+single-plane 2D FFTs per update, and an individual plane provides too
+little work to saturate the GPU. We therefore batch transforms along the
+vertical dimension by promoting 2D scratch planes to 3D arrays, so that
+a single batched cuFFT call filters all vertical levels of a field at
+once. This multiplies parallel work per launch, saturates GPU execution
+units, and reduces thousands of launches to a few dozen.
 
 \subsection{Heterogeneous CPU--GPU execution}
 \label{sec:opt-overlap}
@@ -122,9 +114,8 @@ CPU into a coprocessor for code that resists GPU offloading.
 \subsection{Experiences porting to modern GPUs}
 \label{sec:opt-impl}
 
-Beyond the component-specific optimizations above, we identified three 
-general practices from our porting effort that apply broadly to
-directive-based GPU codes.
+Beyond the optimizations above, we identified three general practices from
+our porting effort that apply broadly to directive-based GPU codes.
 
 \textbf{Compute Uniformly, Then Patch the Exceptions.} Conditional
 logic inside a hot kernel forces every thread in a warp to serialize

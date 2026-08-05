@@ -76,12 +76,11 @@ placement strategies on our own code and traces the bottleneck to
 the host--device coupling points. Guided by this analysis, we analyze
 all coupling points across the solver, classify them by host consumer
 read footprints, and apply four treatments (gate, slice, relocate, and overlap).
-Beyond data-residency optimization, we redesign each remaining solver
-component with custom GPU formulations. To accelerate the pressure
-equation, we design a chunk-pipelined scheme for its distributed
-tridiagonal solve. We also reformulate the actuator-line model to
-evaluate all turbines concurrently in a single batch. In addition,
-we accelerate Lagrangian dynamic SGS filtering using batched FFTs
+Beyond data-residency optimization, we apply three optimizations to
+the remaining structural bottlenecks. We
+pipeline independent systems across a serialized rank chain to
+accelerate the pressure equation's distributed tridiagonal solve;
+batch many small work items to mitigate kernel launch overhead;
 and hide residual host-side airfoil physics behind device execution
 through CPU--GPU heterogeneous execution.
 
@@ -96,10 +95,12 @@ will be open-sourced upon acceptance.
 \item We analyze and classify all host--device coupling points by
 their host consumer footprints, enforcing minimal data movement through
 four distinct treatments (gate, slice, relocate, and overlap).
-\item We design custom GPU formulations for the solver's
-coupling-heavy modules, introducing a chunk-pipelined distributed
-tridiagonal solver, a batched multi-turbine actuator-line model,
-batched-FFT dynamic SGS filtering, and CPU--GPU heterogeneous execution.
+\item We demonstrate three optimizations on the
+solver's coupling-heavy modules: chunk pipelining across serial rank
+chains to hide inter-rank communication delays, batching many small
+work items to mitigate kernel launch overhead, and CPU--GPU
+heterogeneous execution to overlap residual host physics with the GPU
+backlog.
 \item We evaluate the port at production scale on a 472M-cell,
 60-turbine wind farm, achieving a $32\times$ speedup (up to $57\times$
 under dynamic subgrid-scale evaluation) over the fastest CPU baseline.
