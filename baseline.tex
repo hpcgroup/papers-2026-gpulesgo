@@ -139,23 +139,20 @@ vertical solve.
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
-    \caption{CPU strong scaling of LESGO on the production wind-farm case of Section~\ref{sec:setup}.}
+    \caption{CPU strong scaling of LESGO on the production wind-farm case of Section~\ref{sec:setup}. 
+    The cross marks 128 ranks on a single node, which exceeds node memory.}
     \label{fig:ceiling}
 \end{figure}
     
 
 On CPU architectures, this design encounters severe scaling limits.
 Figure~\ref{fig:ceiling} evaluates the strong scaling of the production
-wind-farm case, which simulates 60 turbines on a 472M-cell grid
-($3072 \times 384 \times 400$), on Perlmutter CPU nodes with
+wind-farm case, which simulates 60 turbines on a 604M-cell grid
+($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
-As shown in Figure~\ref{fig:ceiling}, the bandwidth-bound solver
-saturates a node near 40 of its 128 cores (9.68\,s per step), and
-packing 100 ranks onto the same node is counterproductive (11.4\,s).
-Scaling out helps only weakly. Two nodes at 200 ranks reach 7.29\,s,
-and four nodes at 400 ranks, where the 1D slab decomposition reaches
-its structural limit of one vertical plane per rank, plateau at
-5.11\,s per step.
+As shown in Figure~\ref{fig:ceiling}, increasing cores from
+16 to 64 returns only 1.08$\times$ speedup, while 128 ranks exhaust the node's memory. 
+Four nodes at 512 ranks plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
 At this scaling ceiling, accumulating converged turbulence statistics
 requires running hundreds of thousands of time steps. As a result, a single
 production simulation takes several hours to days to complete, making

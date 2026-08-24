@@ -172,15 +172,14 @@ save(fig, "fig_sol")
 # Convection reads < 0.3 ms at every scale (its kernels drain inside the
 # pressure stage's first synchronization) and is folded into the caption.
 gpus = [16, 32, 64]
-# per-stage hatches from the PSSG list; '**' is skipped, its stars
-# overwhelm a wide stacked segment at column width
+# Colors and hatches follow the PSSG lists in order, series i taking
+# PALETTE1[i] (the palette with black removed) and HATCHES[i].
 stages = [
-    ("Pressure",     [0.049498, 0.016243, 0.019202], VERM,   "white", "xxx"),
-    ("SGS",          [0.033061, 0.015360, 0.009332], BLUE,   "white", "//"),
-    ("Derivatives",  [0.023735, 0.010793, 0.006440], GREEN,  "white", "|||"),
-    ("Turbines",     [0.008404, 0.002566, 0.001827], PURPLE, "white", "OO"),
-    ("Projection",   [0.004885, 0.003127, 0.002685], ROSE,   "black", "++"),
-    ("Other",        [0.035254, 0.035286, 0.034928], ORANGE, "black", "\\\\\\"),
+    ("Pressure",           [0.0570, 0.0235, 0.0172], VERM,   "white", "xxx"),
+    ("Derivatives + SGS",  [0.0607, 0.0330, 0.0191], BLUE,   "white", "//"),
+    ("Turbines",           [0.0082, 0.0041, 0.0020], GREEN,  "white", "|||"),
+    ("Projection",         [0.0053, 0.0036, 0.0028], PURPLE, "white", "OO"),
+    ("Other",              [0.0304, 0.0290, 0.0309], ROSE,   "black", "++"),
 ]
 
 fig, ax = plt.subplots(figsize=(3.45, 2.35))
@@ -202,7 +201,7 @@ for i, b in enumerate(bottom):
 
 ax.set_xticks(list(x))
 ax.set_xticklabels([str(g) for g in gpus])
-ax.set_xlim(-0.55, 2.85)
+ax.set_xlim(-0.55, 2.6)
 ax.set_ylim(0, 180)
 ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
 ax.set_xlabel("GPUs")

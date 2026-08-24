@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 """fig_roofline -- classic roofline of the production-step kernel families.
-
-Data: roofline ncu capture of rank 0 on the wf60 production case
-(case tree runs/ncu_gpu16_55477553/wf60_roofline_rank0.ncu-rep, A100-80).
-Per family: FLOPs = (dadd+dmul+2*dfma [+f-ops]) x elapsed cycles, bytes =
-dram__bytes.sum.per_second x duration, aggregated over captured launches.
-AI = FLOPs/DRAM bytes; rate = FLOPs/duration; size ~ share of profiled time.
-Roofs: A100-80GB, 2.039 TB/s HBM2e and 9.7 TF/s FP64 (ridge 4.76 F/B).
 """
 import os
 
@@ -22,13 +15,13 @@ OUT = os.path.dirname(os.path.abspath(__file__))
 # family, AI (F/B), TFLOP/s, % of profiled time, class (0 = hand-written
 # OpenACC, 1 = cuFFT, 2 = ATM/scattered)
 fams = [
-    ("convection",        0.074, 0.13, 24.1, 0),
-    ("SGS",               0.163, 0.26, 16.7, 0),
+    ("convection",        0.074, 0.13, 24.3, 0),
+    ("SGS",               0.163, 0.26, 16.8, 0),
     ("pressure",          0.063, 0.11,  1.5, 0),
-    ("regular\\_fft",     1.476, 1.71, 32.7, 1),
-    ("vector\\_fft",      1.899, 3.14, 23.4, 1),
-    ("ATM force proj.",  34.63,  2.59,  1.5, 2),
-    ("ATM sampling",      5.193, 0.41,  0.05, 2),
+    ("regular\\_fft",     1.471, 1.73, 32.5, 1),
+    ("vector\\_fft",      1.886, 3.13, 23.4, 1),
+    ("ATM force proj.",  33.57,  2.70,  1.4, 2),
+    ("ATM sampling",      4.805, 0.40,  0.05, 2),
 ]
 BW_TBS = 2.039     # A100-80 HBM2e
 PEAK_TF = 9.7      # FP64 (FMA)
@@ -58,10 +51,10 @@ lab = {
     "convection":       (0.074, 0.13, (4, -11)),
     "SGS":              (0.163, 0.26, (5, -3)),
     "pressure":         (0.063, 0.11, (-4, 6)),
-    "regular\\_fft":    (1.476, 1.71, (-6, -14)),
-    "vector\\_fft":     (1.899, 3.14, (5, 3)),
-    "ATM force proj.":  (34.63, 2.59, (-4, 6)),
-    "ATM sampling":     (5.193, 0.41, (-8, 8)),
+    "regular\\_fft":    (1.471, 1.73, (-6, -14)),
+    "vector\\_fft":     (1.886, 3.13, (5, 3)),
+    "ATM force proj.":  (33.57, 2.70, (-4, 6)),
+    "ATM sampling":     (4.805, 0.40, (-8, 8)),
 }
 for name, (x, y, off) in lab.items():
     ax.annotate(name.replace("\\_", "_"), xy=(x, y), xytext=off,

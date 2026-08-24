@@ -65,18 +65,17 @@
 \definecolor{myblue}{RGB}{53, 121, 139}
 \definecolor{mygray}{RGB}{240, 255, 240}
 
-% Stage-tag colors for Algorithm 1 (text-contrast variants of the
-% fig_stagescale palette).
-% Stage colors match the fig_stagescale palette (text-darkened hues):
-% Pressure=vermillion, SGS=blue, Derivatives=green, Turbines=purple,
-% Projection=rose, Other=orange. Convection has no bar (gray).
-\definecolor{stgderiv}{RGB}{0,122,89}    % derivatives  (green)
-\definecolor{stgsgs}{RGB}{0,102,160}     % SGS          (blue)
-\definecolor{stgconv}{RGB}{100,100,100}  % convection   (gray)
-\definecolor{stgturb}{RGB}{128,0,128}    % turbines     (purple)
-\definecolor{stgpress}{RGB}{178,72,0}    % pressure     (vermillion)
-\definecolor{stgproj}{RGB}{204,102,153}  % projection   (rose)
-\definecolor{stgother}{RGB}{150,102,0}   % other        (orange)
+% Stage-tag colors for Algorithm 1: exact PSSG palette values, identical
+% to the fig_stagescale bars.
+% Pressure=vermillion, Derivatives=green, SGS=blue, Turbines=purple,
+% Projection=rose, Other=orange. Convection has no bar (gray, off-palette).
+\definecolor{stgderiv}{RGB}{0,158,115}   % derivatives  (green      #009E73)
+\definecolor{stgsgs}{RGB}{0,114,178}     % SGS          (blue       #0072B2)
+\definecolor{stgconv}{RGB}{100,100,100}  % convection   (gray, off-palette)
+\definecolor{stgturb}{RGB}{128,0,128}    % turbines     (purple     #800080)
+\definecolor{stgpress}{RGB}{213,94,0}    % pressure     (vermillion #D55E00)
+\definecolor{stgproj}{RGB}{204,121,167}  % projection   (rose       #CC79A7)
+\definecolor{stgother}{RGB}{230,158,0}   % other        (orange     #E69F00)
 % Colored lead words for the time-step walkthrough (Section II).
 \newcommand{\stagelead}[2]{{\leavevmode\sffamily\bfseries\color{#1}#2}}
 % Right-margin section pointer inside Algorithm 1.

@@ -37,58 +37,55 @@ def save(fig, name):
 # ----------------------------------------------------------------------------
 # 2026-08 rerun on dedicated CPU nodes (2x EPYC 7763, 128 cores/node),
 # 50 full steps, TRUE AVG; runs cpu24p*_563223xx in the case tree.
-cores = [10, 20, 40, 100, 200, 400]
-tstep = [17.424, 12.197, 9.676, 11.419, 7.294, 5.108]
-nodes = [1, 1, 1, 1, 2, 4]
-GPU_T = 0.157
+cores = [16, 32, 64, 256, 512]
+tstep = [14.376, 12.577, 13.335, 9.285, 6.479]
+nodes = [1, 1, 1, 2, 4]
+oom_core, oom_t = 128, 13.335
+GPU_T = 0.1619
 
 fig, ax = plt.subplots(figsize=(3.45, 2.5))
 ax.set_xscale("log")
 ax.set_yscale("log")
 
-# ideal scaling from the 10-core point
-xs = [10, 400]
-ax.plot(xs, [tstep[0] * 10 / x for x in xs], ls=ps.dashes(2), lw=0.8,
-        color=LGRAY, zorder=1)
-ax.annotate("ideal", xy=(120, tstep[0] * 10 / 120), color=GRAY, fontsize=7,
-            rotation=-28, ha="center", va="bottom")
+# CPU curve: single series, PSSG marker 0.  clip_on=False keeps the 512-core
+# markers whole where the axis ends exactly at 512.
+ax.plot(cores, tstep, lw=1.1, color=VERM, zorder=2, clip_on=False)
+ax.plot(cores, tstep, ps.MARKERS[0], ms=4.5, color=VERM, mew=0, ls="none",
+        zorder=3, label="CPU", clip_on=False)
 
-# CPU curve: one series, marker shape encodes node count
-ax.plot(cores, tstep, lw=1.1, color=VERM, zorder=2)
-marks = {1: ps.MARKERS[0], 2: ps.MARKERS[1], 4: ps.MARKERS[2]}
-for n in (1, 2, 4):
-    cx = [c for c, m in zip(cores, nodes) if m == n]
-    cy = [t for t, m in zip(tstep, nodes) if m == n]
-    ax.plot(cx, cy, marks[n], ms=4.5, color=VERM, mew=0, ls="none",
-            zorder=3, label=f"CPU, {n} node" + ("s" if n > 1 else ""))
+ax.plot([oom_core], [oom_t], "x", ms=6, mew=1.4, color=VERM, ls="none",
+        zorder=4)
+ax.annotate("out of memory", xy=(oom_core, oom_t), xytext=(0, 7),
+            textcoords="offset points", ha="center", fontsize=6.5,
+            color=VERM)
 
-# GPU reference line
-ax.axhline(GPU_T, color=BLUE, lw=1.2, zorder=2)
-ax.annotate("16$\\times$A100 (4 nodes): 0.157 s", xy=(9.3, GPU_T * 1.22),
-            color=BLUE, fontsize=7.5, va="bottom", ha="left")
+# GPU: single measured point (16 x A100 on 4 nodes), no line
+ax.plot([512], [GPU_T], ps.MARKERS[1], ms=5, color=BLUE, mew=0, ls="none",
+        zorder=4, label="GPU", clip_on=False)
+ax.annotate("16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-6, 0),
+            textcoords="offset points", color=BLUE, fontsize=7.5,
+            va="center", ha="right")
 
-# annotations: knee and best
-# ax.annotate("knee: 8.51 s @ 40", xy=(40, 8.51), xytext=(52, 14.5),
-#             fontsize=7, color="#333333",
-#             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
-ax.annotate("best: 5.11 s @ 400", xy=(400, 5.108), xytext=(110, 2.9),
+# annotations: best CPU point and the CPU-to-GPU gap
+ax.annotate("best: 6.48 s @ 512", xy=(512, 6.479), xytext=(120, 3.2),
             fontsize=7, color="#333333",
             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
-ax.annotate("32$\\times$", xy=(478, 0.95), fontsize=8, color="#333333",
-            ha="left")
-ax.annotate("", xy=(460, 0.185), xytext=(460, 4.4),
+ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=8, color="#333333",
+            ha="right")
+ax.annotate("", xy=(512, 0.26), xytext=(512, 3.4),
             arrowprops=dict(arrowstyle="->", color=GRAY, lw=0.7))
 
-ax.set_xticks([10, 20, 40, 100, 200, 400])
-ax.set_xticklabels(["10", "20", "40", "100", "200", "400"])
+ax.set_xticks([16, 32, 64, 128, 256, 512])
+ax.set_xticklabels(["16", "32", "64", "128", "256", "512"])
+ax.set_xticks([], minor=True)
 ax.set_yticks([0.2, 0.5, 1, 2, 5, 10, 20])
 ax.set_yticklabels(["0.2", "0.5", "1", "2", "5", "10", "20"])
-ax.set_xlim(9, 620)
+ax.set_xlim(15, 512)
 ax.set_ylim(0.11, 20)
 ax.set_xlabel("CPU cores")
 ax.set_ylabel("time per step (s)")
 ax.grid(True, which="major", axis="y")
-ax.legend(loc="lower left", bbox_to_anchor=(0.0, 0.20),
+ax.legend(loc="lower left", bbox_to_anchor=(0.0, 0.10),
           handletextpad=0.4, borderaxespad=0.2)
 fig.tight_layout(pad=0.3)
 save(fig, "fig_ceiling")
@@ -152,19 +149,14 @@ save(fig, "fig_breakdown")
 # ----------------------------------------------------------------------------
 # Fig. 5 -- GPU strong (left) + weak (right) scaling
 # ----------------------------------------------------------------------------
-# strong scaling at three problem sizes (clean production steps; the
-# 472M series is the original 40-GB-node campaign, the 906M and 1.36B
-# series run on the 80-GB node pool, chunk retuned at 64/128 GPUs)
+
 strong = [
-    ("472M",  [16, 32, 64],      [0.152, 0.080, 0.071],           VERM),
-    ("906M",  [16, 32, 64, 128], [0.2377, 0.1313, 0.0831, 0.0783], BLUE),
-    ("1.36B", [32, 64, 128],     [0.1875, 0.1081, 0.0839],         GREEN),
+    ("604M",  [16, 32, 64],  [0.1619, 0.0934, 0.0722], VERM),
+    ("906M",  [16, 32, 64],  [0.2377, 0.1313, 0.0831], BLUE),
+    ("1.36B", [32, 64, 128], [0.1875, 0.1081, 0.0839], GREEN),
 ]
-# weak scaling at three per-GPU loads (2026-08 campaign, case-tree
-# paper-baseline binary with the pipelined tridiagonal solve, clean-step
-# means, 40-GB pool homogeneous; chunk=16 at the 64-GPU points).
-# ms/step: 29.5M: 149.4/156.7/158.5/162.9/165.7; 10.5M: 53.2/52.7/57.6/
-# 60.0/63.6; 4.2M: 40.3/-/43.0/-/52.3.
+
+
 weak = [
     ("29.5M/GPU (production load)", [4, 8, 16, 32, 64],
      [149.4, 156.7, 158.5, 162.9, 165.7], VERM),
