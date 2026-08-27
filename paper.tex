@@ -111,28 +111,28 @@
 
 \title{Accelerating Production-Scale Wind-Farm Large-Eddy Simulation on GPUs}
 
-\author{
-\IEEEauthorblockN{Cunyang Wei\textsuperscript{a,b,\#},
-Wenyuan Chen\textsuperscript{b,c,\#},
-Abhinav Bhatele\textsuperscript{a},
-Charles Meneveau\textsuperscript{c}, and
-Zheng Li\textsuperscript{b}}
-\IEEEauthorblockA{\rev{\textsuperscript{a}Department of Computer Science,
-University of Maryland, College Park, MD 20742, USA}}
-\IEEEauthorblockA{\rev{\textsuperscript{b}Department of Mechatronics Engineering,
-Morgan State University, Baltimore, MD 21251, USA}}
-\IEEEauthorblockA{\rev{\textsuperscript{c}Department of Mechanical Engineering,
-Johns Hopkins University, Baltimore, MD 21218, USA}}
-}
+% \author{
+% \IEEEauthorblockN{Cunyang Wei\textsuperscript{a,b,\#},
+% Wenyuan Chen\textsuperscript{b,c,\#},
+% Abhinav Bhatele\textsuperscript{a},
+% Charles Meneveau\textsuperscript{c}, and
+% Zheng Li\textsuperscript{b}}
+% \IEEEauthorblockA{\rev{\textsuperscript{a}Department of Computer Science,
+% University of Maryland, College Park, MD 20742, USA}}
+% \IEEEauthorblockA{\rev{\textsuperscript{b}Department of Mechatronics Engineering,
+% Morgan State University, Baltimore, MD 21251, USA}}
+% \IEEEauthorblockA{\rev{\textsuperscript{c}Department of Mechanical Engineering,
+% Johns Hopkins University, Baltimore, MD 21218, USA}}
+% }
 
 % Full-width, non-floating Figure 1 directly beneath the title and authors.
 \IEEEaftertitletext{%
-  \vspace{0.35em}
+  \vspace{-0.1in}
   \begin{center}
     \includegraphics[width=0.82\textwidth]{figs/fig_wf60_velocity.pdf}\par
-    \vspace{0.25em}
+    % \vspace{0.25em}
     \refstepcounter{figure}\label{fig:wf60-velocity}%
-    \parbox{0.94\textwidth}{\centering\footnotesize
+    \parbox{\textwidth}{\centering\footnotesize
       \textbf{Fig.~\thefigure.}\;
       \rev{Instantaneous streamwise velocity in a $4\times4$ portion
       of the 60-turbine \texttt{wf60} configuration at $t=1800$\,s. The case
@@ -144,23 +144,23 @@ Johns Hopkins University, Baltimore, MD 21218, USA}}
       $D=126$\,m; the turbine glyphs and vertical scale are enhanced for
       visibility.}}
   \end{center}
-  \vspace{0.45em}
+  % \vspace{0.45em}
 }
 
 \maketitle
-\begingroup
-\renewcommand{\thefootnote}{\#}
-\footnotetext{\rev{Cunyang Wei and Wenyuan Chen contributed equally to this work.}}
-\endgroup
+% \begingroup
+% \renewcommand{\thefootnote}{\#}
+% \footnotetext{\rev{Cunyang Wei and Wenyuan Chen contributed equally to this work.}}
+% \endgroup
 
 \begin{abstract}
 \input{abstract}
 \end{abstract}
 
-\begin{IEEEkeywords}
-large-eddy simulation, GPU acceleration, OpenACC, 
-wind energy, pseudo-spectral methods
-\end{IEEEkeywords}
+% \begin{IEEEkeywords}
+% large-eddy simulation, GPU acceleration, OpenACC, 
+% wind energy, pseudo-spectral methods
+% \end{IEEEkeywords}
 
 \section{Introduction}
 \label{sec:intro}

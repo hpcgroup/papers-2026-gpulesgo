@@ -67,7 +67,10 @@ ax.annotate("16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-6, 0),
             va="center", ha="right")
 
 # annotations: best CPU point and the CPU-to-GPU gap
-ax.annotate("best: 6.48 s @ 512", xy=(512, 6.479), xytext=(120, 3.2),
+# ax.annotate("best: 6.48 s @ 512", xy=(512, 6.479), xytext=(120, 3.2),
+#             fontsize=7, color="#333333",
+#             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
+ax.annotate("4 CPU nodes: 6.48 s", xy=(512, 6.479), xytext=(120, 3.2),
             fontsize=7, color="#333333",
             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
 ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=8, color="#333333",
