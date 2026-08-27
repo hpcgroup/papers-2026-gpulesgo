@@ -12,8 +12,12 @@ computational price, coupling hundreds of millions of grid points to
 the long integration times these flows demand.
 
 LESGO~\cite{lesgo-web,bouzeid2005} is a widely used open-source
-pseudo-spectral LES solver for ABL and wind-farm flows. Its numerical
-formulation combines Fourier collocation in the horizontal directions,
+pseudo-spectral LES solver for ABL and wind-farm flows.
+\rev{The project documents its use in dozens of scientific publications
+spanning wind-farm, rough-surface, canopy, urban, and wall-bounded
+flows~\cite{lesgo-publications}; recent work continues to use LESGO for
+large wind-farm simulations and public datasets~\cite{zhu2025jhtdbwind}.}
+Its numerical formulation combines Fourier collocation in the horizontal directions,
 a scale-dependent Lagrangian dynamic subgrid-scale (SGS)
 model~\cite{bouzeid2005}, and actuator-line turbine
 coupling~\cite{sorensen2002}. This formulation carries little numerical 
@@ -25,13 +29,8 @@ Because the scientific fidelity of turbulent wake simulations relies on
 capturing long physical integration times, this performance ceiling 
 directly limits the accessible physical scales. Porting the solver to 
 GPUs provides a natural path to overcome this  scalability barrier.
-
-\begin{figure}[t]
-    \centering
-    \figplaceholder{diagram from the production science run}
-    \caption{production simulation. }
-    \label{fig:}
-\end{figure}
+\rev{Figure~\ref{fig:wf60-velocity} illustrates the interacting turbulent
+wakes in the 60-turbine configuration used for our production benchmark.}
 
 Porting large Fortran solvers to GPUs with compiler directives such as
 OpenACC is by now well established across weather and climate

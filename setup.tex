@@ -16,17 +16,27 @@ Strong-scaling experiments additionally run the same farm at 768 and
 and wake resolution. A
 $256^3$ two-turbine reference configuration supports the methodology
 measurements of Section~\ref{sec:method}, and weak-scaling experiments
-grow the vertical extent with rank count at fixed per-GPU work. CPU 
-We report speedup against the fastest CPU configuration. We also report 
+grow the vertical extent with rank count at fixed per-GPU work.
+\rev{We report GPU speedup} against the fastest CPU configuration. We also report 
 normalized throughput (ms per million cells per step). 
 
-\textbf{Verification.}  \fix{[Physics-comparison figure
-and data to be supplied from the production science run.]}
+\rev{\textbf{Resolved-flow illustration.}
+Figure~\ref{fig:wf60-vorticity} complements the three-plane farm view in
+Figure~\ref{fig:wf60-velocity} with a horizontal hub-height section of
+signed vertical vorticity. The alternating vorticity bands expose the
+resolved shear layers and their downstream interaction across successive
+turbine rows. Both visualizations document the physical content of the
+benchmark, while the timing experiments use the full-resolution cases
+described above.}
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
-\figplaceholder{GPU vs.\ CPU physics validation}
-\caption{Statistical validation of the GPU port against the CPU
-reference.}
-\label{fig:physics}
+\includegraphics[width=\linewidth]{figs/fig_wf60_vorticity.pdf}
+\caption{\rev{Instantaneous signed vertical vorticity $\omega_zD/U_g$ on
+the hub-height plane $z=H=90$\,m across the first four turbine columns and
+three rows of \texttt{wf60} at $t=1800$\,s. Velocity gradients are evaluated
+at spacings $\Delta x=18.375$\,m and $\Delta y=19.6875$\,m, with $D=126$\,m
+and $U_g=15$\,m\,s$^{-1}$~\cite{zhu2025jhtdbwind}. Short black lines mark
+the rotor-disk intersections with the plane.}}
+\label{fig:wf60-vorticity}
 \end{figure}

@@ -83,6 +83,24 @@
 
 
 \newcommand{\fix}[1]{\textcolor[rgb]{0.0,0.0,1.0}{#1}}
+% Redline only the additions carried into this shared-version snapshot.
+\newcommand{\rev}[1]{#1}
+% Color only bibliography entries introduced by this revision.
+\makeatletter
+\let\gpulesgo@bibitem\bibitem
+\renewcommand{\bibitem}[1]{%
+  \color{black}\gpulesgo@bibitem{#1}%
+  \def\gpulesgo@thiskey{#1}%
+  \def\gpulesgo@usagekey{lesgo-publications}%
+  \def\gpulesgo@datasetkey{zhu2025jhtdbwind}%
+  \ifx\gpulesgo@thiskey\gpulesgo@usagekey
+    \color{black}%
+  \else
+    \ifx\gpulesgo@thiskey\gpulesgo@datasetkey\color{black}\fi
+  \fi}
+\makeatother
+% IEEEtran locks title-area insertions in conference mode by default.
+\IEEEoverridecommandlockouts
 \newcommand{\tweakedsim}{\raise.17ex\hbox{$\scriptstyle\mathtt{\sim}$}}
 
 % Placeholder box for figures that are not yet generated.
@@ -93,24 +111,47 @@
 
 \title{Accelerating Production-Scale Wind-Farm Large-Eddy Simulation on GPUs}
 
-% \author{\IEEEauthorblockN{Cunyang Wei}
-% \IEEEauthorblockA{\textit{Department of Computer Science}\\
-% \textit{University of Maryland}\\
-% College Park, Maryland 20742 USA\\
-% cunyang@umd.edu
-% }
-% \and
-% \IEEEauthorblockN{Abhinav Bhatele}
-% \IEEEauthorblockA{\textit{Department of Computer Science}\\
-% \textit{University of Maryland}\\
-% College Park, Maryland 20742 USA\\
-% bhatele@cs.umd.edu
-% }
-% }
+\author{
+\IEEEauthorblockN{Cunyang Wei\textsuperscript{a,b,\#},
+Wenyuan Chen\textsuperscript{b,c,\#},
+Abhinav Bhatele\textsuperscript{a},
+Charles Meneveau\textsuperscript{c}, and
+Zheng Li\textsuperscript{b}}
+\IEEEauthorblockA{\rev{\textsuperscript{a}Department of Computer Science,
+University of Maryland, College Park, MD 20742, USA}}
+\IEEEauthorblockA{\rev{\textsuperscript{b}Department of Mechatronics Engineering,
+Morgan State University, Baltimore, MD 21251, USA}}
+\IEEEauthorblockA{\rev{\textsuperscript{c}Department of Mechanical Engineering,
+Johns Hopkins University, Baltimore, MD 21218, USA}}
+}
 
-% \renewcommand{\shortauthors}{Wei et al.}
+% Full-width, non-floating Figure 1 directly beneath the title and authors.
+\IEEEaftertitletext{%
+  \vspace{0.35em}
+  \begin{center}
+    \includegraphics[width=0.82\textwidth]{figs/fig_wf60_velocity.pdf}\par
+    \vspace{0.25em}
+    \refstepcounter{figure}\label{fig:wf60-velocity}%
+    \parbox{0.94\textwidth}{\centering\footnotesize
+      \textbf{Fig.~\thefigure.}\;
+      \rev{Instantaneous streamwise velocity in a $4\times4$ portion
+      of the 60-turbine \texttt{wf60} configuration at $t=1800$\,s. The case
+      layout, atmospheric-boundary-layer forcing, and reference scales follow
+      the published JHTDB-wind \texttt{nbl\_windfarm}
+      configuration~\cite{zhu2025jhtdbwind}. A horizontal section at
+      $z=H=90$\,m passes through the rotor centers; two full-height far-side
+      vertical sections extend to the ground. The physical rotor diameter is
+      $D=126$\,m; the turbine glyphs and vertical scale are enhanced for
+      visibility.}}
+  \end{center}
+  \vspace{0.45em}
+}
 
 \maketitle
+\begingroup
+\renewcommand{\thefootnote}{\#}
+\footnotetext{\rev{Cunyang Wei and Wenyuan Chen contributed equally to this work.}}
+\endgroup
 
 \begin{abstract}
 \input{abstract}
