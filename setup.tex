@@ -19,23 +19,32 @@ grow the vertical extent with rank count at fixed per-GPU work.
 \rev{We report GPU speedup} against the fastest CPU configuration. We also report 
 normalized throughput (ms per million cells per step). 
 
-\rev{\textbf{Resolved-flow illustration.}
-Figure~\ref{fig:wf60-vorticity} complements the three-plane farm view in
-Figure~\ref{fig:wf60-velocity} with a horizontal hub-height section of
-signed vertical vorticity. The alternating vorticity bands expose the
-resolved shear layers and their downstream interaction across successive
-turbine rows. Both visualizations document the physical content of the
-benchmark, while the timing experiments use the full-resolution cases
-described above.}
+\textbf{CPU--GPU backend consistency.}
+We first use a small single-turbine case to verify that the CPU and GPU
+backends produce consistent LESGO results. Figure~\ref{fig:lesgo-cpu-gpu}
+compares matched executions using one NREL 5-MW turbine with a panel-based
+actuator-line method and 120 actuator points per blade, with both SGS and
+molecular viscosity disabled. Both runs use the same
+cold start, $480\times384\times240$ grid, fixed nondimensional time step
+$\Delta t=0.0014$, and 1,000 steps. At the common physical time
+$t=15.4737$\,s, the transient near-wake fields agree to floating-point
+roundoff: the wake-deficit pattern correlation is 1.0, the relative
+$L_2$ difference is $1.47\times10^{-13}$, and the maximum normalized axial
+velocity difference is $9.00\times10^{-14}$. This test verifies backend
+consistency; the short integration is not a statistically converged
+far-wake validation.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
-\includegraphics[width=\linewidth]{figs/fig_wf60_vorticity.pdf}
-\caption{\rev{Instantaneous signed vertical vorticity $\omega_zD/U_g$ on
-the hub-height plane $z=H=90$\,m across the first four turbine columns and
-three rows of \texttt{wf60} at $t=1800$\,s. Velocity gradients are evaluated
-at spacings $\Delta x=18.375$\,m and $\Delta y=19.6875$\,m, with $D=126$\,m
-and $U_g=15$\,m\,s$^{-1}$~\cite{zhu2025jhtdbwind}. Short black lines mark
-the rotor-disk intersections with the plane.}}
-\label{fig:wf60-vorticity}
-\end{figure}
+\includegraphics[width=0.96\textwidth]{figs/fig_cpu_gpu_lesgo.pdf}
+\caption{Matched CPU--GPU comparison for a 1,000-step LESGO simulation
+of one NREL 5-MW turbine at the rated $11.4$\,m\,s$^{-1}$ operating point.
+Panels (a) and (b) show normalized axial velocity on the vertical
+rotor-center plane using an identical color scale; panel (c) shows the
+GPU-minus-CPU difference at roundoff scale; and panel (d) compares the
+hub-height centerline profiles. The CPU run used 48 MPI ranks and the GPU run
+used two NVIDIA A100 GPUs. These decompositions were selected for grid
+capacity, so the result is a numerical-parity test rather than a
+hardware-normalized performance benchmark.}
+\label{fig:lesgo-cpu-gpu}
+\end{figure*}
