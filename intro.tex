@@ -1,36 +1,35 @@
 Wind energy is a central pillar of the global transition to renewable
-electricity, and its continued growth depends on understanding how
+power, and its continued growth depends on understanding how
 turbines interact with the turbulent atmospheric boundary layer (ABL)
 and with each other's wakes~\cite{veers2019}. Wake losses in large wind
 farms reduce total power output by 10--20\%~\cite{barthelmie2009}, and
 mitigating them requires simulating tens of turbines embedded in
 kilometers of turbulent atmosphere over hours of physical time.
-Large-eddy simulation (LES) resolves the energy-carrying turbulent
-motions directly and has become the reference tool for wind-farm
-aerodynamics~\cite{calaf2010, stevens2017}, but at a steep
-computational price, coupling hundreds of millions of grid points to
+Large-eddy simulation (LES) resolves these energy-carrying turbulent
+motions directly and has become the de facto standard for wind-farm
+aerodynamics~\cite{calaf2010, stevens2017}. However, it comes at a steep
+computational price when coupling hundreds of millions of grid points to
 the long integration times these flows demand.
 
-LESGO~\cite{lesgo-web,bouzeid2005} is a widely used open-source
-pseudo-spectral LES solver for ABL and wind-farm flows.
-\rev{The project documents its use in dozens of scientific publications
-spanning wind-farm, rough-surface, canopy, urban, and wall-bounded
-flows~\cite{lesgo-publications}; recent work continues to use LESGO for
-large wind-farm simulations and public datasets~\cite{zhu2025jhtdbwind}.}
-Its numerical formulation combines Fourier collocation in the horizontal directions,
-a scale-dependent Lagrangian dynamic subgrid-scale (SGS)
-model~\cite{bouzeid2005}, and actuator-line turbine
-coupling~\cite{sorensen2002}. This formulation carries little numerical 
-dissipation and delivers high accuracy per grid point. Its CPU 
-implementation, however, saturates node memory bandwidth within tens 
-of cores and exhausts its slab decomposition at modest rank counts 
-(Section~\ref{sec:bg-impl}), severely constraining production-scale runs. 
-Because the scientific fidelity of turbulent wake simulations relies on 
-capturing long physical integration times, this performance ceiling 
-directly limits the accessible physical scales. Porting the solver to 
-GPUs provides a natural path to overcome this  scalability barrier.
-\rev{Figure~\ref{fig:wf60-velocity} illustrates the interacting turbulent
-wakes in the 60-turbine configuration used for our production benchmark.}
+LESGO~\cite{lesgo-web,bouzeid2005} is a widely used open-source pseudo-spectral
+LES solver for ABL and wind-farm flows.  The code has been used for many
+different kinds of simulations including wind-farm, rough-surface, canopy,
+urban, and wall-bounded flows~\cite{lesgo-publications}. \fix{you need to cite dozens of publications here} Recent work continues
+to use LESGO for large wind-farm simulations and public
+datasets~\cite{zhu2025jhtdbwind}. \fix{what does use LESGO for public datasets mean?} Its numerical formulation combines Fourier
+colocation in the horizontal directions, a scale-dependent Lagrangian dynamic
+subgrid-scale (SGS) model~\cite{bouzeid2005}, and actuator-line turbine
+coupling~\cite{sorensen2002}. This formulation carries little numerical
+dissipation and delivers high accuracy per grid point. Its CPU implementation,
+however, saturates node memory bandwidth even at tens of cores and exhausts its
+slab decomposition at modest process counts (Section~\ref{sec:bg-impl}), severely
+constraining production-scale runs.  Because the scientific fidelity of
+turbulent wake simulations relies on capturing long physical integration times,
+this performance ceiling directly limits accessible physical time scales.
+Porting the solver to GPUs provides a natural path to overcome these
+scalability barriers.  \rev{Figure~\ref{fig:wf60-velocity} illustrates the
+interacting turbulent wakes in the 60-turbine configuration used for our
+production benchmark.} \fix{this statement looks abrupt here, maybe move it to where you talk about dozens of simulations}
 
 Porting large Fortran solvers to GPUs with compiler directives such as
 OpenACC is by now well established across weather and climate
@@ -38,7 +37,7 @@ models~\cite{lapillonne2014,govett2017nim,norman2015,giorgetta2022,esclapez2025d
 CFD and turbulence
 solvers~\cite{xia2015,otero2019nek,devanna2023uranos}, and production
 physics codes in other domains~\cite{caplan2019mas}. By
-annotating existing loops instead of rewriting them in a GPU-specific
+annotating existing loops instead of rewriting them in a GPU-specific programming
 language, this approach keeps a single source tree, which lowers the 
 barrier to GPU adoption for large and physics-validated code bases, and lets their user communities maintain the source directly. 
 It is especially effective at offloading
@@ -48,8 +47,8 @@ LESGO, however, the factor that governs performance is
 not kernel throughput but data movement.
 
 Pseudo-spectral multiphysics LES has recurring host--device
-\emph{coupling points}, places where host-side code must read or write
-device-resident state. They vary widely in how much of a field they
+\emph{coupling points} -- places where host-side code must read or write
+device-resident state. They vary widely in how much of the field they
 touch and how often, so no single blanket data-placement policy fits
 them all. The two data strategies common to directive-based ports both
 encounter severe limitations here. (1)~Array mirroring, whether 
@@ -63,31 +62,29 @@ pages on demand, a route that minimizes porting effort and underpins
 Fortran standard-parallelism offloading~\cite{caplan2023dc}, yet it
 hides traffic from the source code and incurs page-migration overheads 
 across a range of GPU workloads~\cite{chien2019um}.
-Achieving high performance for LESGO thus requires developing a
+Thus, achieving high performance for LESGO requires developing a
 fine-grained data residency strategy tailored to its distinct
 host--device coupling points.
 
-In this paper, we present the first GPU port of LESGO. The port
-preserves the solver's validated physics and brings
-production-scale wind-farm LES within practical reach. We begin
-with a data-movement analysis that measures the two established
-placement strategies on our own code and traces the bottleneck to
-the host--device coupling points. Guided by this analysis, we analyze
-all coupling points across the solver, classify them by host consumer
-read footprints, and apply four treatments (gate, slice, relocate, and overlap).
-Beyond data-residency optimization, we apply three optimizations to
-the remaining structural bottlenecks. We
-pipeline independent systems across a serialized rank chain to
-accelerate the pressure equation's distributed tridiagonal solve;
-batch many small work items to mitigate kernel launch overhead;
-and hide residual host-side airfoil physics behind device execution
-through CPU--GPU heterogeneous execution.
+In this paper, we present our approach to porting the Fortran solver in LESGO
+to GPGPUs. The port preserves the solver's validated physics and brings
+production-scale wind-farm LES within practical reach. We begin with an analysis of the 
+data movement that measures two established placement strategies \fix{what two strategies?}
+on our own code and traces the bottleneck to host--device coupling points.
+Guided by this analysis, we analyze all coupling points across the solver,
+classify them by host consumer read footprints, and apply four treatments
+(gate, slice, relocate, and overlap). \fix{I am not sure what treatements means} Beyond data-residency optimizations, we
+apply three other optimizations to overcome remaining structural bottlenecks. We pipeline
+independent systems across a serialized rank chain to accelerate the pressure
+equation's distributed tridiagonal solve; batch many small work items to
+mitigate kernel launch overhead; and hide residual host-side airfoil physics
+behind device execution through CPU--GPU heterogeneous execution.
 
-We implement our GPU port in OpenACC with the NVHPC compiler,
+We implement our GPU port in OpenACC using the NVHPC compiler,
 and evaluate it on NVIDIA A100 GPUs and H200 GPUs. 
-This work makes the following contributions.
+This work makes the following contributions:
 \begin{itemize}
-\item We present the first GPU port of LESGO, covering its full
+\item We present the first ever GPU port of LESGO, covering its full
 physics pipeline. To our knowledge, this is the first directive-based 
 GPU LES with actuator-line wind-farm coupling at this scale. Our code 
 will be open-sourced upon acceptance.
@@ -100,7 +97,7 @@ chains to hide inter-rank communication delays, batching many small
 work items to mitigate kernel launch overhead, and CPU--GPU
 heterogeneous execution to overlap residual host physics with the GPU
 backlog.
-\item We evaluate the port at production scale on a 604M-cell, 60-turbine 
-wind farm, achieving a $40\times$ speedup over the fastest CPU baseline.
-We demonstrate scaling up to 128 GPUs on a 1.36 billion-cell grid. 
+\item We evaluate the GPU version at production scale on a 604M-cell, 60-turbine 
+wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline.
+We also demonstrate scaling up to 128 GPUs on a 1.36 billion-cell grid. 
 \end{itemize}
