@@ -1,20 +1,17 @@
-Large-eddy simulation (LES) is the reference tool for wind-farm
-aerodynamics because it resolves energy-carrying turbulence in the
-atmospheric boundary layer directly rather than modeling it. LESGO is a
-widely used open-source solver for this regime built on pseudo-spectral
-methods, which carry minimal numerical dissipation and deliver high
-accuracy per grid point. 
-Its CPU implementation, however, suffers from poor parallel scalability,
-severely constraining the grid resolution and physical
-integration times of production-scale wind-farm simulations.
-To enable production-scale runs, we present the first GPU port of LESGO. 
-For this class of pseudo-spectral multiphysics solver with recurring
-host--device coupling, data movement rather than kernel throughput governs
-overall performance. We analyze all host--device coupling points across the
-solver and classify them into four treatments. On this
-foundation, we propose several optimizations, including chunk
-pipelining across serial rank chains, batching many small work items,
-and heterogeneous CPU--GPU execution.
-Evaluation on a 604-million-cell, 60-turbine wind farm demonstrates a $40\times$ 
-speedup over a best-performing CPU baseline and strong scaling up to 
-128 GPUs on a 1.36-billion-cell grid.
+Large-eddy simulation (LES) is the de facto standard for wind-farm aerodynamics
+because it directly resolves energy-carrying turbulence in the atmospheric
+boundary layer rather than modeling it. LESGO is a widely used open-source
+solver for this regime built on pseudo-spectral methods, which carry minimal
+numerical dissipation and deliver high accuracy per grid point. LESGO's CPU
+implementation, however, suffers from poor parallel scalability, severely
+constraining the grid resolution and physical integration times of
+production-scale wind-farm simulations. To enable significantly finer resolutions and longer time scales, we
+present the porting of LESGO to GPGPUs. For this class of pseudo-spectral
+multi-physics solvers with recurring host--device coupling, data movement rather
+than kernel throughput governs overall performance. We analyze all host--device
+coupling points across the solver and classify them into four treatments. On
+this foundation, we propose several optimizations, including chunk pipelining
+across serial rank chains, batching many small work items, and heterogeneous
+CPU--GPU execution.  Evaluation on a 60-turbine wind farm discretized into 604 million cells
+demonstrates a 40$\times$ speedup over the best-performing CPU baseline and
+strong scaling up to 128 GPUs on a 1.36 billion cell grid.
