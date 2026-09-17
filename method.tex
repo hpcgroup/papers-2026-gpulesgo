@@ -40,6 +40,7 @@ We now quantify the limitations of the two dominant data-placement
 strategies in directive-based ports. Figure~\ref{fig:datamove}
 summarizes both measurements.
 
+\vspace{0.08in}
 \textbf{Array Mirroring.} Our reference baseline configuration 
 ($256^3$ grid with two wind turbines on 4 A100 GPUs) adopts array 
 mirroring, the conventional strategy in directive-based 
@@ -55,6 +56,7 @@ synchronization of twelve $O(N^3)$ arrays (420\,MB per step).
 Furthermore, array mirroring allocates unnecessary device memory, 
 which consumes valuable GPU memory resources and reduces usability.
 
+\vspace{0.08in}
 \textbf{CUDA Managed Memory.} Managed memory minimizes initial porting
 effort and underpins Fortran standard-parallelism
 offloading~\cite{caplan2023dc}, making it an attractive default for
@@ -77,9 +79,10 @@ footprints.
 \begin{table*}[t]
 \centering
 \caption{Taxonomy of host--device coupling points in a pseudo-spectral
-multiphysics LES solver and the data-residency strategies that resolve each class. Naive costs are measured
-per step on the reference configuration [R] or the production case
-[P].}
+multiphysics LES solver and the data-residency strategies that resolve each class. 
+% Naive costs are measured per step on the reference configuration [R] or the production case
+% [P].
+}
 \label{tab:taxonomy}
 \footnotesize
 \renewcommand{\arraystretch}{1.2}
@@ -93,29 +96,29 @@ per step on the reference configuration [R] or the production case
 Class & Instance in LESGO & Naive cost per step & Treatment \\
 \midrule
 Boundary plane & wall-stress model reads $u,v,w$ at the walls &
-full fields, 420\,MB [R] & \emph{slice} to wall planes, later
-\emph{relocate} (\S\ref{sec:opt-atm}) \\
+full fields, 420\,MB & \emph{slice} to wall planes, later
+\emph{relocate} \\
 Conditional & velocity gradients read by the CPU SGS fallback only &
-9 fields, 315\,MB [R] & \emph{gate} on the SGS model choice \\
+9 fields, 315\,MB & \emph{gate} on the SGS model choice \\
 Spectral mode & pressure zero-wavenumber recurrence (serial in $z$) &
-3 full-field round trips [R] & \emph{slice} to the DC column
+3 full-field round trips & \emph{slice} to the DC column
 ($\sim$1\,KB) \\
 Stale entry & \texttt{copyin} of pressure at solver entry &
-34\,MB [R] & \emph{slice} to a seeded ghost plane via \texttt{create} \\
+34\,MB & \emph{slice} to a seeded ghost plane via \texttt{create} \\
 Pipeline state & time integration and projection read $u,v,w$, RHS &
-210\,MB [R] & \emph{relocate}, keep the update pipeline
+210\,MB & \emph{relocate}, keep the update pipeline
 device-resident \\
 Actuator & blade sampling and force projection & 2 full-field
-crossings [P] & \emph{relocate}, exchange $O(\text{blade points})$
-(\S\ref{sec:opt-atm}) \\
-Diagnostics & energy, divergence, checkpoint writes & 765\,MB on
-sampled steps [P] & \emph{relocate} reductions, \emph{gate} output
+crossings & \emph{relocate}, exchange $O(\text{blade points})$
+(\S\ref{sec:opt-batch}) \\
+Diagnostics & energy, divergence, checkpoint writes & 765\,MB 
+& \emph{relocate} reductions, \emph{gate} output
 steps \\
 Serial chain & tridiagonal Thomas chains spanning ranks &
 host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
 (\S\ref{sec:opt-tridag}) \\
-Host physics & tabulated airfoil polar lookups & serialized 28\,ms
-[P] & \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
+Host physics & tabulated airfoil polar lookups & serialized 24\,ms
+& \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
 \bottomrule
 \end{tabular}
 \vspace{-0.1in}
@@ -134,34 +137,64 @@ structural property of the data structures. Every GPU kernel asserts
 data presence (\texttt{default(present)}). This eliminates routine data
 movement and exposes all coupling points for systematic optimization.
 
-We then examined every coupling point, categorizing its spatial extent
-(scalar, 1D column, 2D boundary plane, or 3D subvolume), temporal
-frequency (per step, periodic, or model-conditional), and access intent
-(read-only, write-only, or read-modify-write). This audit revealed that
-all coupling points belong to the nine recurring classes listed in
-Table~\ref{tab:taxonomy}. To minimize or eliminate host--device data
-movement, each class is addressed using one of four targeted strategies:
-\emph{Gate}, \emph{Relocate}, \emph{Slice}, and \emph{Overlap}.
-\emph{Gate} exploits temporal frequency, skipping the transfer whenever a
-conditional or low-frequency consumer does not execute.
-\emph{Relocate} ports the consumer routine directly to the GPU,
-eliminating the coupling point entirely whenever the routine parallelizes well.
-\emph{Slice} applies when relocation is not viable, such as when the consumer is
-inherently serial, branches irregularly, or performs host-only I/O.
-In these cases, the routine stays on the host and the transfer shrinks to
-the minimal footprint actually touched.
-\emph{Overlap} serves as the final treatment for irreducible transfers,
-hiding them behind concurrent GPU execution.
+We then examined every coupling point along three axes: the spatial
+extent the host routine touches (scalar, 1D column, 2D boundary plane,
+or 3D subvolume), how often it executes (every step, periodically, or
+only under a model option), and its access intent (read-only,
+write-only, or read-modify-write). We then group
+and classify all coupling points in LESGO into the nine classes listed in
+Table~\ref{tab:taxonomy}. For each class, the table gives its concrete
+instance in LESGO, the transfer cost that a naive port pays per step, and
+the treatment we apply.
 
-Each row in Table~\ref{tab:taxonomy} summarizes one class, its specific
-instance in LESGO, the cost incurred by a naive port, and our
-corresponding optimization. Every reduction is justified by a static
-code property, such as consumer loop bounds, write-before-read
-ordering, or execution guards. To illustrate how these strategies are applied, we present an example below. Although the instances
+Working through the nine classes, we found that four data strategies
+suffice to resolve all of them: \emph{gate}, \emph{relocate},
+\emph{slice}, and \emph{overlap}. Each exploits a different property of
+the coupling point, and we consider them in this order, moving to the
+next only when the previous one does not apply.
+
+\vspace{0.08in}
+\textbf{Gate} exploits temporal frequency. It applies when the consumer
+runs only under a model option or on a subset of steps, such as the
+velocity gradients read by the CPU SGS fallback or the fields written at
+output steps. The transfer is wrapped in the same guard that controls
+the consumer, so it is skipped entirely on steps where the consumer does
+not execute.
+
+\vspace{0.08in}
+\textbf{Relocate} exploits parallelism in the consumer. If the host
+routine parallelizes well, we port it to the GPU so it can read
+device-resident data in place. We apply
+this to the time-integration and projection pipeline, the diagnostic
+reductions, actuator sampling and force projection, and the distributed
+tridiagonal chains. 
+
+\vspace{0.08in}
+\textbf{Slice} exploits the spatial footprint. It applies when
+relocation is not viable because the consumer is inherently serial,
+branches irregularly, or performs host-only I/O. 
+Those routines stay on the host. We send only the array
+section they actually read or write, specified in the \texttt{update
+self} and \texttt{update device} directives. For the wall-stress planes,
+the pressure DC column, and the ghost plane seeded at solver entry, a
+34--420\,MB field transfer becomes a few kilobytes.
+
+\vspace{0.08in}
+\textbf{Overlap} is for host work that the first three strategies cannot
+remove, such as the tabulated airfoil lookups. Their inputs are known
+at a fixed point in the time step, but the computation cannot be
+relocated or sliced. We launch the GPU kernels that do not
+depend on this work asynchronously and run the host routine while they
+execute. The host time is hidden behind device execution
+(Section~\ref{sec:opt-overlap}).
+
+Although the instances
 reflect LESGO, these classes recur across pseudo-spectral multiphysics
 codes, providing a general porting checklist for similar solvers.
+To illustrate how these strategies are applied, we present an example below.
 
-\begin{lstlisting}[caption={Structure-aware partial transfer for the
+\begin{lstlisting}[float=t,linewidth=\columnwidth,
+caption={Structure-aware partial transfer for the
 pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
 synchronization (top).},label={lst:dc}]
 ! naive: 3 full-field round trips / step
@@ -194,7 +227,5 @@ computation with full 3D field transfers, resulting in three 34\,MB
 round trips per step. The slice instead transfers only the
 $\sim$1\,KB input column to the host, evaluates the exact same
 recurrence, and pushes the $\sim$1\,KB output column back to the GPU.
-
-Profiling confirms the effectiveness of this design. On the 472M-cell
-production benchmark, \texttt{nsys} shows that no $O(N^3)$ array crosses
-the host--device interconnect during steady-state time marching. 
+As shown in Table~\ref{tab:finalmetrics}, profiling confirms that only 
+minimal host--device data transfer remains on the production benchmark. 

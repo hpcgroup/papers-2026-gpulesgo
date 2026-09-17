@@ -47,6 +47,7 @@ pseudo-spectral codes~\cite{ravikumar2019}.
 Two physics components dominate both the scientific fidelity and the
 computational complexity of wind-farm LES in LESGO.
 
+\vspace{0.08in}
 \textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} An eddy
 viscosity closes the SGS stress in Eq.~\ref{eq:les}. The model computes
 its coefficient dynamically~\cite{germano1991}, averages it along
@@ -64,6 +65,7 @@ challenges compared to conventional local closures that rely
 primarily on stencil operations~\cite{esclapez2025dales}, and it
 has no counterpart in prior directive-based LES ports.
 
+\vspace{0.08in}
 \textbf{Actuator-line turbine model (ATM).} Each turbine blade is
 represented by discrete actuator points that sample the local LES
 velocity via trilinear interpolation, look up tabulated airfoil
@@ -71,7 +73,7 @@ aerodynamic polars, and project the resulting forces back onto the grid
 through a Gaussian convolution kernel~\cite{sorensen2002,martinez2015}.
 Simulating multi-turbine farms introduces thousands of moving, off-grid
 coupling points that interact with the flow field twice per time step
-during velocity sampling and force projection (Section~\ref{sec:opt-atm}). 
+during velocity sampling and force projection (Section~\ref{sec:opt-batch}). 
 Prior GPU-accelerated wind-farm simulation frameworks have largely 
 focused on the ExaWind stack~\cite{sharma2024exawind,mullowney2021,kuhn2025amrwind}, 
 which comprises second-order finite-volume codes tailored for 

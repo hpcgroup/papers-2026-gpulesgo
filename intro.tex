@@ -78,9 +78,9 @@ on LESGO itself, and trace the bottleneck to host--device coupling
 points. Guided by this analysis, we analyze all coupling points across the solver,
 classify them by host consumer read footprints, and apply four treatments: 
 \emph{gate} skips a transfer whenever its
-conditional or infrequent consumer does not execute; \emph{slice} shrinks a
-transfer to the subset of the field the host touches; \emph{relocate} ports
-the consumer to the GPU and removes the transfer altogether; and
+conditional or infrequent consumer does not execute; \emph{relocate} ports
+the consumer to the GPU and removes the transfer altogether; \emph{slice}
+shrinks a transfer to the subset of the field the host touches; and
 \emph{overlap} hides an irreducible transfer behind concurrent GPU execution.
 Beyond these data-residency treatments, we apply three further optimizations
 to the remaining structural bottlenecks. We pipeline
@@ -99,7 +99,7 @@ GPU LES with actuator-line wind-farm coupling at this scale. Our code
 will be open-sourced upon acceptance.
 \item We analyze and classify all host--device coupling points by
 their host consumer footprints, enforcing minimal data movement through
-four distinct treatments (gate, slice, relocate, and overlap).
+four distinct treatments (gate, relocate, slice, and overlap).
 \item We demonstrate three optimizations on the
 solver's coupling-heavy modules: chunk pipelining across serial rank
 chains to hide inter-rank communication delays, batching many small

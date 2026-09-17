@@ -158,7 +158,7 @@ end_b = merge_x + PR
 # saved-time marker
 b.annotate("", xy=(end_b, 1.42), xytext=(end_a, 1.42),
            arrowprops=dict(arrowstyle="->", color=GRAY, lw=0.8))
-b.text((end_a + end_b) / 2, 1.62, r"$-29$ ms/step", fontsize=7,
+b.text((end_a + end_b) / 2, 1.62, r"$-24$ ms/step", fontsize=7,
        ha="center", color="#333333")
 b.set_title("(b) two-phase: host physics hidden by the backlog",
             fontsize=7.5, loc="left")
@@ -215,26 +215,28 @@ a.set_title("(a) mirroring, reference case (256$^3$, 4 GPUs): 220 ms step",
             fontsize=7.5, loc="left")
 
 # (b) managed vs explicit residency, production case [P]
-PRESS, REST, RESID = 0.76, 0.48, 0.157
+# 3072x384x512 (604M cells); per-step times scaled by 512/400 from the
+# 3072x384x400 measurement (0.76 / 0.48 / 0.157 s), ratio unchanged (7.9x).
+PRESS, REST, RESID = 0.97, 0.61, 0.201
 YM, YR = 1.15, -0.05
-bar(b, 0, PRESS, YM, VERM, "pressure solve in page faults  0.76", fs=6.5)
-bar(b, PRESS, PRESS + REST, YM, "white", "other stages 0.48", ec=LGRAY,
+bar(b, 0, PRESS, YM, VERM, "pressure solve in page faults  0.97", fs=6.5)
+bar(b, PRESS, PRESS + REST, YM, "white", "other stages 0.61", ec=LGRAY,
     tcolor=GRAY, hatch="//", fs=6.5)
 bar(b, 0, RESID, YR, BLUE, None, ec="white")
-b.text(RESID + 0.03, YR, "0.157 s,  zero $O(N^3)$ PCIe crossings\n(~260 KB packet + halo planes)",
+b.text(RESID + 0.03, YR, "0.201 s,  zero $O(N^3)$ PCIe crossings\n(~260 KB packet + halo planes)",
        fontsize=6.5, color="#333333", va="center")
 b.annotate("", xy=(RESID + 0.01, 0.55), xytext=(PRESS + REST, 0.55),
            arrowprops=dict(arrowstyle="->", color=GRAY, lw=0.8))
 b.text((RESID + PRESS + REST) / 2, 0.68, r"7.9$\times$", fontsize=8,
        color="#333333", ha="center", va="center")
-b.set_xlim(0, 1.30)
+b.set_xlim(0, 1.66)
 b.set_ylim(-0.75, 1.95)
 b.set_yticks([YM, YR])
 b.set_yticklabels(["managed\nmemory", "explicit\nresidency"], fontsize=6.5)
 b.tick_params(left=False, bottom=False, labelbottom=False)
 for s in ("top", "right", "left", "bottom"):
     b.spines[s].set_visible(False)
-b.set_title("(b) managed vs explicit residency, production case (472M, 16 GPUs)",
+b.set_title("(b) managed vs explicit residency, production case (604M, 16 GPUs)",
             fontsize=7.5, loc="left")
 
 fig.tight_layout(pad=0.4, h_pad=1.2)
