@@ -158,7 +158,7 @@ end_b = merge_x + PR
 # saved-time marker
 b.annotate("", xy=(end_b, 1.42), xytext=(end_a, 1.42),
            arrowprops=dict(arrowstyle="->", color=GRAY, lw=0.8))
-b.text((end_a + end_b) / 2, 1.62, r"$-24$ ms/step", fontsize=7,
+b.text((end_a + end_b) / 2, 1.62, r"$-30$ ms/step", fontsize=7,
        ha="center", color="#333333")
 b.set_title("(b) two-phase: host physics hidden by the backlog",
             fontsize=7.5, loc="left")

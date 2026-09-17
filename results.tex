@@ -113,6 +113,13 @@ from 32 to 64 GPUs on the 1.36B-cell grid, reducing step time from
 at 0.084\,s per time
 step, achieving a throughput of 16.2 billion cell updates per second.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
+    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
+    \label{fig:stagescale}
+\end{figure}
+
 We decompose runtime on the 604M-cell grid into individual solver
 stages from Algorithm~\ref{alg:step}, as shown in Fig.~\ref{fig:stagescale}. 
 From 16 to 64 GPUs, the combined derivative and SGS stages fall 
@@ -128,14 +135,6 @@ global CFL reduction required for adaptive time stepping and
 turbine-forcing load balance. These costs reflect algorithmic minima
 governed by interconnect and host-runtime latency, not inefficiencies in
 the GPU kernels themselves.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
-    \label{fig:stagescale}
-\end{figure}
-    
 
 \begin{figure}[h]
 \centering

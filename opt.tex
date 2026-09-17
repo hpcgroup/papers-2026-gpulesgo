@@ -16,7 +16,7 @@ production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 In the spectral Poisson solve (\texttt{PoissonTridiag()} in
 Algorithm~\ref{alg:step}), independent 1D tridiagonal systems along $z$
 arise for each horizontal wavenumber pair. This yields approximately
-$590K$ independent systems of 400 unknowns, each distributed across
+$590K$ independent systems of 512 unknowns, each distributed across
 all 16 ranks in 1D slab domain decomposition. Standard forward
 elimination and back substitution in the Thomas algorithm operate
 serially along $z$, forcing rank $k$ to idle until rank $k-1$ completes
@@ -100,7 +100,7 @@ to execute convection kernels while the CPU evaluates aerodynamic forces
 concurrently. Phase 2 uploads the calculated forces and projects them 
 onto the Eulerian grid. 
 This overlap removes host computation from the critical path, saving
-24\,ms per step and raising overall GPU utilization to
+30\,ms per step and raising overall GPU utilization to
 \textbf{93\%}. This pattern generalizes to any host routine whose inputs
 remain fixed at a known stage of the time step, effectively turning the
 CPU into a coprocessor for code that resists GPU offloading.

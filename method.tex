@@ -111,13 +111,13 @@ device-resident \\
 Actuator & blade sampling and force projection & 2 full-field
 crossings & \emph{relocate}, exchange $O(\text{blade points})$
 (\S\ref{sec:opt-batch}) \\
-Diagnostics & energy, divergence, checkpoint writes & 765\,MB 
+Diagnostics & energy, divergence, checkpoint writes & 963\,MB 
 & \emph{relocate} reductions, \emph{gate} output
 steps \\
 Serial chain & tridiagonal Thomas chains spanning ranks &
 host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
 (\S\ref{sec:opt-tridag}) \\
-Host physics & tabulated airfoil polar lookups & serialized 24\,ms
+Host physics & tabulated airfoil polar lookups & serialized 28\,ms
 & \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
 \bottomrule
 \end{tabular}
