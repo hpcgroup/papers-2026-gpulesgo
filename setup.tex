@@ -1,8 +1,8 @@
-\textbf{Platforms.} GPU experiments run on NERSC Perlmutter, where each
-GPU node has four NVIDIA A100 GPUs on a Slingshot-11 interconnect, 
+\textbf{Platforms.} We run our experiments on NERSC Perlmutter~\cite{perlmutter}, 
+where each GPU node has four NVIDIA A100 GPUs on a Slingshot-11 interconnect, 
 with NVHPC 25.5, CUDA 12.9, cuFFT 11.4, 
 and CUDA-aware Cray MPICH 9.1.0. CPU baselines run on the 
-Perlmutter's CPU nodes (AMD EPYC 7763), with the same source tree.
+Perlmutter's CPU nodes with two 64-core AMD EPYC 7763 (Milan) CPUs each.
 
 \textbf{Cases.} The production case (``wf60'') is a 60-turbine wind
 farm of NREL 5-MW reference turbines~\cite{jonkman2009} in a
@@ -12,12 +12,8 @@ by $3072\times384\times512 \approx 604$M grid points, with the LASD SGS
 model, equilibrium wall model, and actuator-line turbines.
 Strong-scaling experiments additionally run the same farm at 768 and
 1152 vertical levels (906M and 1.36B cells), refining the wall-layer
-and wake resolution. A
-$256^3$ two-turbine reference configuration supports the methodology
-measurements of Section~\ref{sec:method}, and weak-scaling experiments
-grow the vertical extent with rank count at fixed per-GPU work.
-\rev{We report GPU speedup} against the fastest CPU configuration. We also report 
-normalized throughput (ms per million cells per step). 
+and wake resolution.
+We report GPU speedup against the fastest CPU configuration.
 
 \textbf{CPU--GPU backend consistency.}
 We first use a small single-turbine case to verify that the CPU and GPU
@@ -31,8 +27,7 @@ $t=15.4737$\,s, the transient near-wake fields agree to floating-point
 roundoff: the wake-deficit pattern correlation is 1.0, the relative
 $L_2$ difference is $1.47\times10^{-13}$, and the maximum normalized axial
 velocity difference is $9.00\times10^{-14}$. This test verifies backend
-consistency; the short integration is not a statistically converged
-far-wake validation.
+consistency.
 
 \begin{figure*}[t]
 \centering
@@ -43,8 +38,6 @@ Panels (a) and (b) show normalized axial velocity on the vertical
 rotor-center plane using an identical color scale; panel (c) shows the
 GPU-minus-CPU difference at roundoff scale; and panel (d) compares the
 hub-height centerline profiles. The CPU run used 48 MPI ranks and the GPU run
-used two NVIDIA A100 GPUs. These decompositions were selected for grid
-capacity, so the result is a numerical-parity test rather than a
-hardware-normalized performance benchmark.}
+used two NVIDIA A100 GPUs.}
 \label{fig:lesgo-cpu-gpu}
 \end{figure*}

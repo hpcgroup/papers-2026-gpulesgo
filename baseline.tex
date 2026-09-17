@@ -34,14 +34,14 @@ Below, we describe the execution flow of a single time step in detail.
 \STATE \textcolor{stgderiv}{WallStress()}
 \STATE \textcolor{stgsgs}{SGS()}
 \STATE \hspace{1.3em}\textbf{if} $n \bmod c = 0$ \textbf{then}
-\STATE \hspace{2.6em}\textcolor{stgsgs}{UpdateLASDCoefficient()}\algptr{stgsgs}{sec:opt-lasd}
+\STATE \hspace{2.6em}\textcolor{stgsgs}{UpdateLASDCoefficient()}\algptr{stgsgs}{sec:opt-batch}
 \STATE \hspace{1.3em}\textcolor{stgsgs}{SGSStress()}
 \STATE \hspace{1.3em}\textcolor{stgsgs}{StressDivergence()}
 \STATE \textcolor{stgconv}{Convection()}
 \STATE \textcolor{stgturb}{Turbines()}
-\STATE \hspace{1.3em}\textcolor{stgturb}{SampleBladeVelocities()}\algptr{stgturb}{sec:opt-atm}
+\STATE \hspace{1.3em}\textcolor{stgturb}{SampleBladeVelocities()}\algptr{stgturb}{sec:opt-batch}
 \STATE \hspace{1.3em}\textcolor{stgturb}{ComputeBladeForces()}\algptr{stgturb}{sec:opt-overlap}
-\STATE \hspace{1.3em}\textcolor{stgturb}{SpreadBladeForces()}\algptr{stgturb}{sec:opt-atm}
+\STATE \hspace{1.3em}\textcolor{stgturb}{SpreadBladeForces()}\algptr{stgturb}{sec:opt-batch}
 \STATE \textcolor{stgpress}{AdvanceAB2()}
 \STATE \textcolor{stgpress}{Pressure()}
 \STATE \hspace{1.3em}\textcolor{stgpress}{PoissonFFT()}
@@ -71,7 +71,7 @@ unresolved turbulent fluxes. Every $c$-th step ($c=5$ in production runs),
 model coefficient $C_s^2$ (Section~\ref{sec:bg-physics}) by applying two 
 spectral test filters and advecting dynamic model accumulators along fluid particle 
 trajectories, making it the most computationally irregular and memory-bound routine 
-in the solver (Section~\ref{sec:opt-lasd}). On every step, \texttt{SGSStress()} 
+in the solver (Section~\ref{sec:opt-batch}). On every step, \texttt{SGSStress()} 
 recalculates the eddy viscosity $\nu_t = C_s^2 \Delta^2 |S|$ using the current 
 strain rate and computes the subgrid stress tensor, after which 
 \texttt{StressDivergence()} calculates its spatial divergence.

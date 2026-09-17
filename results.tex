@@ -20,17 +20,17 @@ Configuration & s/step & vs.\ CPU \\
 CPU, fastest configuration (4 nodes)  & 6.48 & 1.0$\times$ \\
 Explicit residency (\S\ref{sec:method-taxonomy})
                                         & 1.320 & 4.9$\times$ \\
-\;+ actuator-line model on device (\S\ref{sec:opt-atm})
+\;+ actuator-line model on device (\S\ref{sec:opt-batch})
                                        & 0.574 & 11.3$\times$ \\
 \;+ chunk pipelining (\S\ref{sec:opt-tridag})
+                                       & 0.303 & 21.4$\times$ \\
+\;+ batching (\S\ref{sec:opt-batch})
                                        & 0.192 & 33.8$\times$ \\
-\;+ batching (\S\ref{sec:opt-atm})
-                                       & 0.186 & 27.5$\times$ \\
 \;+ heterogeneous overlap (\S\ref{sec:opt-overlap})
                                        & \textbf{0.162} & \textbf{40$\times$} \\
 \midrule
-CPU, 4 nodes, with LASD cadence       & 8.18 & 1.0$\times$ \\
-Final GPU build, with LASD cadence (\S\ref{sec:opt-lasd})
+4 CPU nodes, with LASD cadence       & 8.18 & 1.0$\times$ \\
+4 GPU nodes, with LASD cadence (\S\ref{sec:opt-batch})
                                         & 0.206 & \textbf{39.7$\times$} \\
 \bottomrule
 \end{tabular}
@@ -42,26 +42,44 @@ its respective section. First, our fine-grained data management
 strategy enables a per-step runtime of 1.32\,s, already $4.9\times$ 
 faster than the fastest CPU configuration. 
 Then, relocating the actuator-line coupling onto the device
-(\S\ref{sec:opt-atm}) removes the last recurring full-field PCIe
+(\S\ref{sec:opt-batch}) removes the last recurring full-field PCIe
 crossings and shortens the step by $2.3\times$. Pipelining the
 distributed tridiagonal solve (\S\ref{sec:opt-tridag}) converts the
 serialized rank chain of the pressure solver into overlapped chunk
 waves for a further $1.9\times$. Batching the 60 turbines into single
-kernels and one packed reduction (\S\ref{sec:opt-atm}) removes the
+kernels and one packed reduction (\S\ref{sec:opt-batch}) removes the
 per-instance launch overhead for another $1.6\times$, and hiding the
 residual host physics behind the device backlog
 (\S\ref{sec:opt-overlap}) contributes the final $1.2\times$. Each
 treatment resolves a distinct bottleneck class.
 The fully optimized GPU solver achieves 0.162\,s per time step (0.27\,ms
 per million cells), representing a $40\times$ speedup over the fastest
-CPU configuration. The LASD update (\S\ref{sec:opt-lasd}) fires only every fifth step
-at production cadence, so its acceleration appears at full cadence
-in the bottom rows of the table rather than inside the per-step
-progression. These results demonstrate that our fine-grained data management
+CPU configuration. Production runs update the LASD coefficient every fifth 
+step (\S\ref{sec:opt-batch}), so that cost is not part of the 0.162\,s
+progression. The bottom rows of the table compare CPU and GPU under
+the same cadence. These results demonstrate that our fine-grained data management
 methodology and the component optimizations are individually
 effective and complementary.
 
 
+\begin{table}[h]
+    \centering
+    \caption{Execution profile of the final port on the production case
+    (16$\times$A100, \texttt{nsys}/\texttt{ncu}, per step).}
+    \label{tab:finalmetrics}
+    \footnotesize
+    \begin{tabular}{@{}lr@{}}
+    \toprule
+    Metric & Value \\
+    \midrule
+    GPU busy fraction & 93\% \\
+    Sustained DRAM bandwidth & 1.5\,TB/s per GPU (73\% of peak) \\
+    Host-to-device memcpy volume & 1.6\,MB \\
+    Device-to-host memcpy volume & 2.0\,MB \\
+    DRAM bandwidth of dominant kernels & 67--88\% of peak \\
+    \bottomrule
+    \end{tabular}
+\end{table}
 
 
 Table~\ref{tab:finalmetrics} profiles execution metrics for the final
@@ -70,24 +88,6 @@ total time step duration, memory transfer volumes confirm zero $O(N^3)$
 PCIe data movement during steady-state time marching, and dominant
 kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:roofline}).
 
-\begin{table}[h]
-\centering
-\caption{Execution profile of the final port on the production case
-(16$\times$A100, \texttt{nsys}/\texttt{ncu}, per step).}
-\label{tab:finalmetrics}
-\footnotesize
-\begin{tabular}{@{}lr@{}}
-\toprule
-Metric & Value \\
-\midrule
-GPU busy fraction & 93\% \\
-Sustained DRAM bandwidth & 1.5\,TB/s per GPU (73\% of peak) \\
-Host-to-device memcpy volume & 1.6\,MB \\
-Device-to-host memcpy volume & 2.0\,MB \\
-DRAM bandwidth of dominant kernels & 67--88\% of peak \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsection{Scaling}
 \label{sec:results-scaling}
@@ -106,50 +106,36 @@ sizes.}
 
 Figure~\ref{fig:scaling} presents strong scaling performance for the
 60-turbine wind farm across vertical grid resolutions of 512, 768, and
-1152 levels. The solver maintains 95\% parallel efficiency from 16 to
+1152 levels. The solver maintains 87\% parallel efficiency from 16 to
 32 GPUs on the 604M-cell grid, 90\% on the 906M-cell grid, and 87\%
 from 32 to 64 GPUs on the 1.36B-cell grid, reducing step time from
 0.188\,s to 0.108\,s. On this largest grid, scaling extends to 128 GPUs
 at 0.084\,s per time
-step, achieving a throughput of 18.8 billion cell updates per second.
+step, achieving a throughput of 16.2 billion cell updates per second.
 
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-\caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
-\label{fig:stagescale}
-\end{figure}
-
-To analyze scaling behavior, Figure~\ref{fig:stagescale} decomposes
-runtime into individual solver stages from Algorithm~\ref{alg:step}. Each
-GPU stage scales predictably with per-device workload. From 16 to 64
-GPUs, the combined derivative and SGS stages fall from 61\,ms to
-19\,ms and the turbine stage from 8\,ms to 2\,ms, while the pressure solver exhibits
+We decompose runtime on the 604M-cell grid into individual solver
+stages from Algorithm~\ref{alg:step}, as shown in Fig.~\ref{fig:stagescale}. 
+From 16 to 64 GPUs, the combined derivative and SGS stages fall 
+from 61\,ms to 19\,ms and the turbine stage from 8\,ms to 2\,ms, 
+while the pressure solver exhibits
 superlinear scaling up to 32 GPUs as thinner slab dimensions deepen the
 tridiagonal pipeline (Section~\ref{sec:opt-tridag}). At high GPU
-counts, execution time is bounded by a constant overhead of
-approximately 50\,ms, which already accounts for most of the 72\,ms
-step at 64 GPUs. This overhead primarily
-stems from the \texttt{Other} stage, which includes latency-bound collectives such
-as global CFL reductions to handle turbine-forcing load imbalances,
-along with a constant kernel launch budget measuring 31\,ms across all
-runs. The remaining overhead reflects the minimal latency floor of the
-tridiagonal pipeline.
+counts, execution time is bounded by a constant overhead. 
+This overhead is primarily from the \texttt{Other} stage, which comprises
+latency-bound collectives and the residual kernel launch budget after
+batching (Section~\ref{sec:opt-batch}). The dominant collective is the
+global CFL reduction required for adaptive time stepping and
+turbine-forcing load balance. These costs reflect algorithmic minima
+governed by interconnect and host-runtime latency, not inefficiencies in
+the GPU kernels themselves.
 
-Overall step time thus follows a model composed of scalable GPU compute
-and a fixed latency term. Maintaining roughly 20 million grid cells
-per GPU ensures that scalable computation dominates total execution,
-preserving high parallel efficiency. Consequently, parallel efficiency
-at a fixed GPU count increases with problem size, directly benefiting
-production-scale simulations. This fixed latency term represents an
-essential algorithmic baseline. Global CFL reductions enforce adaptive
-time stepping correctness, mandatory kernel dispatches persist after
-batching thousands of small launches (Section~\ref{sec:opt-atm}),
-and the pipeline latency floor represents
-the physical limit of serial vertical operations (Section~\ref{sec:opt-tridag}).
-Because computational kernels operate near peak DRAM bandwidth
-(Fig.~\ref{fig:roofline}), remaining overheads are governed by hardware
-interconnect and host runtime latencies.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
+    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
+    \label{fig:stagescale}
+\end{figure}
+    
 
 \begin{figure}[h]
 \centering
@@ -162,8 +148,9 @@ Nsight Compute profiling demonstrates that every major kernel
 operates near the hardware's memory-bandwidth roof
 (Fig.~\ref{fig:roofline}). Custom field kernels achieve 67--88\% of peak DRAM
 bandwidth at 24--37\% of peak compute throughput, while batched cuFFT
-kernels reach 48--82\% of peak memory bandwidth. The residual gap on
-the largest transform is internal to the library kernel. 
+kernels reach 48--82\% of peak memory bandwidth. The remaining bandwidth 
+gap on the largest transform lies in
+cuFFT library kernel, beyond the reach of application-level tuning.
 
 \begin{figure}[h]
 \centering
@@ -172,16 +159,15 @@ the largest transform is internal to the library kernel.
 \label{fig:weakscaling}
 \end{figure}
 
-Weak scaling holds the per-GPU grid fixed while
-the vertical extent grows with rank count, as shown in Fig.~\ref{fig:weakscaling}. 
+Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
+a fixed grid size and the domain grows vertically with rank count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
-64 GPUs). As in
-strong scaling, heavier loads scale flatter. The only stage whose cost
-grows with rank count is the pressure solve, whose tridiagonal chains
-span the deepening slab stack; all other stages stay constant to three
-digits. The chunk pipeline of Section~\ref{sec:opt-tridag} contains
-this growth.
+64 GPUs). The other two problem sizes exhibit similarly strong weak-scaling
+behavior. This confirms that scaling efficiency is maintained as long as
+each GPU carries a sufficiently large workload, which is the regime
+that production runs occupy. These results demonstrate the effectiveness
+of optimizations presented in Section~\ref{sec:method} and ~\ref{sec:opt}.
 
 While a 2D pencil decomposition could extend rank limits further, the
 1D slab structure fully satisfies our target physics. LESGO does not
@@ -189,8 +175,7 @@ pursue ever-larger wind-farm domains. It instead resolves the
 turbulence physics of horizontally periodic atmospheric boundary
 layers and their interaction with turbine arrays, where the grid is
 set by the scales of turbulent motion rather than by domain extent.
-The demonstrated range (1.36 billion cells at 87\% parallel
-efficiency across 128 GPUs) therefore provides ample computational
+The demonstrated range therefore provides ample computational
 support for production research of this class. For this reason, 
 retaining the 1D slab
 decomposition avoids an unnecessary architectural rewrite while
