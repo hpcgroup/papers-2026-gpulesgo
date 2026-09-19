@@ -29,18 +29,17 @@ $O(N^3)$ bytes.
 \subsection{Data-Movement Bottlenecks}
 \label{sec:method-problem}
 
+We now quantify the limitations of the two dominant data-placement
+strategies in directive-based ports.
+
 \begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{figs/fig_datamove.pdf}
-\caption{Time-step breakdown under the baseline data-placement strategies. (a)~Mirroring leaves the GPU 94\% idle on the reference case. (b)~Explicit residency runs the production case $7.9\times$ faster than managed memory.}
-\label{fig:datamove}
+  \centering
+  \includegraphics[width=\linewidth]{figs/fig_mirroring.pdf}
+  \caption{Time-step breakdown under array mirroring on the reference case ($256^3$ cells, 4 A100 GPUs). Host--device transfers and host-side synchronization leave the GPU 94\% idle.}
+  \label{fig:mirroring}
 \end{figure}
 
-We now quantify the limitations of the two dominant data-placement
-strategies in directive-based ports. Figure~\ref{fig:datamove}
-summarizes both measurements.
-
-\vspace{0.08in}
+% \vspace{0.08in}
 \textbf{Array Mirroring.} Our reference baseline configuration 
 ($256^3$ grid with two wind turbines on 4 A100 GPUs) adopts array 
 mirroring, the conventional strategy in directive-based 
@@ -51,10 +50,17 @@ updated state. However, \texttt{Nsight Systems}
 profiling reveals that only 13\,ms of a 220\,ms time step is attributed to
 GPU execution. PCIe transfers and host-side synchronization account for 
 the remaining 207\,ms, which keeps the GPU \textbf{94\% idle}
-(Fig.~\ref{fig:datamove}a). The primary bottleneck is a full-field
+(Fig.~\ref{fig:mirroring}). The primary bottleneck is a full-field
 synchronization of twelve $O(N^3)$ arrays (420\,MB per step). 
 Furthermore, array mirroring allocates unnecessary device memory, 
 which consumes valuable GPU memory resources and reduces usability.
+
+% \begin{figure}[h]
+% \centering
+% \includegraphics[width=\linewidth]{figs/fig_managed.pdf}
+% \caption{Per-step time under CUDA managed memory versus explicit residency on the production case (604M cells, 16 A100 GPUs).}
+% \label{fig:managed}
+% \end{figure}
 
 \vspace{0.08in}
 \textbf{CUDA Managed Memory.} Managed memory minimizes initial porting
@@ -62,10 +68,12 @@ effort and underpins Fortran standard-parallelism
 offloading~\cite{caplan2023dc}, making it an attractive default for
 directive-based ports. However, evaluating CUDA managed memory
 (\texttt{-gpu=mem:managed}) on the production benchmark
-(Section~\ref{sec:setup}) across 16 A100 GPUs yields limited acceleration
-(Fig.~\ref{fig:datamove}b). Using \texttt{nsys} profiling, we found that
+(Section~\ref{sec:setup}) across 16 A100 GPUs yields limited acceleration. 
+Using \texttt{nsys} profiling, we found that
 extensive page faults and data migration overheads inherent to
-demand-paged unified memory~\cite{chien2019um} severely stall execution.
+demand-paged unified memory~\cite{chien2019um} severely stall execution:
+the pressure solve alone takes 0.97\,s of the 1.58\,s step, whereas the
+whole step takes 0.201\,s under explicit residency.
 
 These performance gaps demonstrate that for complex multiphysics solvers
 with heterogeneous coupling points, default data-placement strategies

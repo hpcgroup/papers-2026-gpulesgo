@@ -43,27 +43,51 @@ $256\times256\times64$  & 16.8M--268M & 4.2M  & 4, 16, 64 \\
 
 \textbf{CPU--GPU backend consistency.}
 We first use a small single-turbine case to verify that the CPU and GPU
-backends produce consistent LESGO results. Figure~\ref{fig:lesgo-cpu-gpu}
+backends produce consistent LESGO results. Figure~\ref{fig:lesgo-cpu-gpu-field}
 compares matched executions using one NREL 5-MW turbine with a panel-based
 actuator-line method and 120 actuator points per blade, with both SGS and
 molecular viscosity disabled. Both runs use the same
 cold start, $480\times384\times240$ grid, fixed nondimensional time step
-$\Delta t=0.0014$, and 1,000 steps. At the common physical time
+$\Delta t=0.0014$, and 1,000 steps; the CPU run uses 48 MPI ranks and the
+GPU run two A100 GPUs. At the common physical time
 $t=15.4737$\,s, the transient near-wake fields agree to floating-point
 roundoff: the wake-deficit pattern correlation is 1.0, the relative
 $L_2$ difference is $1.47\times10^{-13}$, and the maximum normalized axial
-velocity difference is $9.00\times10^{-14}$. This test verifies backend
-consistency.
+velocity difference is $9.00\times10^{-14}$. The GPU-minus-CPU difference
+(Fig.~\ref{fig:lesgo-cpu-gpu-field}c) follows the wake structure but stays
+at roundoff scale, and the hub-height centerline profiles
+(Fig.~\ref{fig:lesgo-cpu-gpu}) are indistinguishable, confirming that the
+two backends are consistent.
 
 \begin{figure*}[t]
-\centering
-\includegraphics[width=0.96\textwidth]{figs/fig_cpu_gpu_lesgo.pdf}
-\caption{Matched CPU--GPU comparison for a 1,000-step LESGO simulation
-of one NREL 5-MW turbine at the rated $11.4$\,m\,s$^{-1}$ operating point.
-Panels (a) and (b) show normalized axial velocity on the vertical
-rotor-center plane using an identical color scale; panel (c) shows the
-GPU-minus-CPU difference at roundoff scale; and panel (d) compares the
-hub-height centerline profiles. The CPU run used 48 MPI ranks and the GPU run
-used two NVIDIA A100 GPUs.}
-\label{fig:lesgo-cpu-gpu}
+    \centering
+    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
+    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
+    1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
+    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
+    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
+    \label{fig:lesgo-cpu-gpu-field}
 \end{figure*}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
+    \caption{Hub-height centerline profiles of $u/U_\infty$ from the CPU
+    and GPU runs of Fig.~\ref{fig:lesgo-cpu-gpu-field}. The two curves
+    coincide.}
+    \label{fig:lesgo-cpu-gpu}
+\end{figure}
+
+
+% \begin{figure*}[t]
+% \centering
+% \includegraphics[width=0.96\textwidth]{figs/fig_cpu_gpu_lesgo.pdf}
+% \caption{Matched CPU--GPU comparison for a 1,000-step LESGO simulation
+% of one NREL 5-MW turbine at the rated $11.4$\,m\,s$^{-1}$ operating point.
+% Panels (a) and (b) show normalized axial velocity on the vertical
+% rotor-center plane using an identical color scale; panel (c) shows the
+% GPU-minus-CPU difference at roundoff scale; and panel (d) compares the
+% hub-height centerline profiles. The CPU run used 48 MPI ranks and the GPU run
+% used two NVIDIA A100 GPUs.}
+% \label{fig:lesgo-cpu-gpu}
+% \end{figure*}

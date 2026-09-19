@@ -16,7 +16,8 @@ Data sources:
   fig_stagescale: runs/scal_gpu{16,32,64}nz384_*/run.log stage timers
                   (last wbase snapshot; extract_timing.sh semantics)
 
-Style: shared PSSG environment (pssg_style.py).
+Style: PSSG PlotEnvironment defaults via pssg_style.apply(env=True):
+5 x 3 in figures, 10 pt fonts; LaTeX scales each to the column width.
 """
 import csv
 import os
@@ -28,7 +29,7 @@ from matplotlib.lines import Line2D
 import pssg_style as ps
 from pssg_style import VERM, BLUE, GREEN, PURPLE, ROSE, ORANGE, GRAY, LGRAY
 
-ps.apply()
+ps.apply(env=True)
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 NCU_CSV = ("/pscratch/sd/c/cunyang/msu/case/lesgo/test-cases/"
@@ -139,20 +140,20 @@ else:
     print("ncu_details.csv not mounted; using embedded job-55477553 table")
     acc_pts, fft_pts = ACC, FFT
 
-fig, ax = plt.subplots(figsize=(3.45, 2.55))
+fig, ax = plt.subplots(figsize=ps.FIGSIZE)
 ax.fill_between([0, 100], [0, 100], [100, 100], color="#f0f0f0", zorder=0)
-ax.plot([0, 100], [0, 100], ls=ps.dashes(2), lw=0.8, color=LGRAY, zorder=1)
-ax.annotate("memory-bound", xy=(6, 91), fontsize=7, color=GRAY, ha="left")
-ax.annotate("compute-bound", xy=(97, 30), fontsize=7, color=GRAY, ha="right")
+ax.plot([0, 100], [0, 100], ls=ps.dashes(2), lw=1.0, color=LGRAY, zorder=1)
+ax.annotate("memory-bound", xy=(6, 91), fontsize=9, color=GRAY, ha="left")
+ax.annotate("compute-bound", xy=(97, 30), fontsize=9, color=GRAY, ha="right")
 
 for pts, color, z in ((acc_pts, VERM, 3), (fft_pts, BLUE, 4)):
     ax.scatter([p[0] for p in pts], [p[1] for p in pts],
                s=[p[2] for p in pts], facecolor=color, edgecolor="white",
                linewidth=0.6, alpha=0.85, zorder=z)
 
-legend = [Line2D([], [], marker="o", ls="none", ms=6, mfc=VERM, mec="white",
+legend = [Line2D([], [], marker="o", ls="none", mfc=VERM, mec="white",
                  label="hand-written (OpenACC)"),
-          Line2D([], [], marker="o", ls="none", ms=6, mfc=BLUE, mec="white",
+          Line2D([], [], marker="o", ls="none", mfc=BLUE, mec="white",
                  label="cuFFT (library)")]
 ax.legend(handles=legend, loc="lower right",
           handletextpad=0.3, borderaxespad=0.2)
@@ -182,7 +183,7 @@ stages = [
     ("Other",              [0.0304, 0.0290, 0.0309], ROSE,   "black", "++"),
 ]
 
-fig, ax = plt.subplots(figsize=(3.45, 2.35))
+fig, ax = plt.subplots(figsize=ps.FIGSIZE)
 x = range(len(gpus))
 bottom = [0.0] * len(gpus)
 for name, vals, color, tcol, hatch in stages:
@@ -192,12 +193,12 @@ for name, vals, color, tcol, hatch in stages:
     for i, (b, v) in enumerate(zip(bottom, ms)):
         if v > 7.5:   # direct-label the large segments
             ax.annotate(f"{v:.0f}", xy=(i, b + v / 2), ha="center",
-                        va="center", fontsize=6.5, color=tcol, zorder=4)
+                        va="center", fontsize=9, color=tcol, zorder=4)
     bottom = [b + v for b, v in zip(bottom, ms)]
 
 for i, b in enumerate(bottom):
-    ax.annotate(f"{b:.0f} ms", xy=(i, b), xytext=(0, 3),
-                textcoords="offset points", ha="center", fontsize=7.5)
+    ax.annotate(f"{b:.0f} ms", xy=(i, b), xytext=(0, 4),
+                textcoords="offset points", ha="center", fontsize=10)
 
 ax.set_xticks(list(x))
 ax.set_xticklabels([str(g) for g in gpus])
@@ -206,6 +207,7 @@ ax.set_ylim(0, 180)
 ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
 ax.set_xlabel("GPUs")
 ax.set_ylabel("stage time per step (ms)")
+ax.set_title("Runtime decomposition on the 604M-cell case")
 ax.grid(True, axis="y")
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles[::-1], labels[::-1], loc="upper right",

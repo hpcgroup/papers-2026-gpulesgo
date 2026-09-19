@@ -9,8 +9,10 @@ Outputs (vector PDF for LaTeX + PNG previews):
 Data sources: cpu_scaling_summary.tsv / weak_scaling_summary.tsv (2026-07-03
 sweeps) and measured campaign checkpoints from the optimization records.
 
-Style: shared PSSG environment (pssg_style.py). Palette order VERM,
-BLUE, GREEN...; CPU/before = vermillion, GPU/after = blue throughout.
+Style: PSSG PlotEnvironment defaults via pssg_style.apply(env=True):
+5 x 3 in figures, 10 pt fonts, 2 pt lines, 8 pt markers; LaTeX scales
+each to the column width. Palette order VERM, BLUE, GREEN...;
+CPU/before = vermillion, GPU/after = blue throughout.
 """
 import os
 
@@ -20,7 +22,7 @@ from matplotlib.lines import Line2D
 import pssg_style as ps
 from pssg_style import VERM, BLUE, GREEN, GRAY, LGRAY
 
-ps.apply()
+ps.apply(env=True)
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,27 +45,27 @@ nodes = [1, 1, 1, 2, 4]
 oom_core, oom_t = 128, 13.335
 GPU_T = 0.1619
 
-fig, ax = plt.subplots(figsize=(3.45, 2.5))
+fig, ax = plt.subplots(figsize=ps.FIGSIZE)
 ax.set_xscale("log")
 ax.set_yscale("log")
 
 # CPU curve: single series, PSSG marker 0.  clip_on=False keeps the 512-core
 # markers whole where the axis ends exactly at 512.
-ax.plot(cores, tstep, lw=1.1, color=VERM, zorder=2, clip_on=False)
-ax.plot(cores, tstep, ps.MARKERS[0], ms=4.5, color=VERM, mew=0, ls="none",
+ax.plot(cores, tstep, color=VERM, zorder=2, clip_on=False)
+ax.plot(cores, tstep, ps.MARKERS[0], color=VERM, mew=0, ls="none",
         zorder=3, label="CPU", clip_on=False)
 
-ax.plot([oom_core], [oom_t], "x", ms=6, mew=1.4, color=VERM, ls="none",
+ax.plot([oom_core], [oom_t], "x", ms=10, mew=2, color=VERM, ls="none",
         zorder=4)
-ax.annotate("out of memory", xy=(oom_core, oom_t), xytext=(0, 7),
-            textcoords="offset points", ha="center", fontsize=6.5,
+ax.annotate("out of memory", xy=(oom_core, oom_t), xytext=(0, 9),
+            textcoords="offset points", ha="center", fontsize=9,
             color=VERM)
 
 # GPU: single measured point (16 x A100 on 4 nodes), no line
-ax.plot([512], [GPU_T], ps.MARKERS[1], ms=5, color=BLUE, mew=0, ls="none",
+ax.plot([512], [GPU_T], ps.MARKERS[1], color=BLUE, mew=0, ls="none",
         zorder=4, label="GPU", clip_on=False)
-ax.annotate("16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-6, 0),
-            textcoords="offset points", color=BLUE, fontsize=7.5,
+ax.annotate("4 GPU nodes: 16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-9, 0),
+            textcoords="offset points", color=BLUE, fontsize=10,
             va="center", ha="right")
 
 # annotations: best CPU point and the CPU-to-GPU gap
@@ -71,12 +73,12 @@ ax.annotate("16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-6, 0),
 #             fontsize=7, color="#333333",
 #             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
 ax.annotate("4 CPU nodes: 6.48 s", xy=(512, 6.479), xytext=(120, 3.2),
-            fontsize=7, color="#333333",
-            arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
-ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=8, color="#333333",
+            fontsize=10, color="#333333",
+            arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8))
+ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=10, color="#333333",
             ha="right")
 ax.annotate("", xy=(512, 0.26), xytext=(512, 3.4),
-            arrowprops=dict(arrowstyle="->", color=GRAY, lw=0.7))
+            arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0))
 
 ax.set_xticks([16, 32, 64, 128, 256, 512])
 ax.set_xticklabels(["16", "32", "64", "128", "256", "512"])
@@ -87,6 +89,7 @@ ax.set_xlim(15, 512)
 ax.set_ylim(0.11, 20)
 ax.set_xlabel("CPU cores")
 ax.set_ylabel("time per step (s)")
+ax.set_title("CPU strong scaling of the production case")
 ax.grid(True, which="major", axis="y")
 ax.legend(loc="lower left", bbox_to_anchor=(0.0, 0.10),
           handletextpad=0.4, borderaxespad=0.2)
@@ -103,21 +106,21 @@ comp = [
     ("Wall stress",       33.0, 0.1),
 ]
 
-fig = plt.figure(figsize=(3.45, 2.1))
+fig = plt.figure(figsize=ps.FIGSIZE)
 gs = fig.add_gridspec(1, 2, width_ratios=[2.6, 1.0], wspace=0.45)
 ax = fig.add_subplot(gs[0])
 axb = fig.add_subplot(gs[1])
 
 ys = list(range(len(comp)))[::-1]
 for y, (name, before, after) in zip(ys, comp):
-    ax.plot([after, before], [y, y], lw=1.0, color=LGRAY, zorder=1)
-    ax.plot(before, y, "o", ms=5, color=VERM, mew=0, zorder=2)
-    ax.plot(after, y, "o", ms=5, color=BLUE, mew=0, zorder=3)
-    ax.annotate(f"{before:g}", xy=(before, y), xytext=(0, 5),
-                textcoords="offset points", ha="center", fontsize=6.5,
+    ax.plot([after, before], [y, y], lw=1.5, color=LGRAY, zorder=1)
+    ax.plot(before, y, "o", color=VERM, mew=0, zorder=2)
+    ax.plot(after, y, "o", color=BLUE, mew=0, zorder=3)
+    ax.annotate(f"{before:g}", xy=(before, y), xytext=(0, 7),
+                textcoords="offset points", ha="center", fontsize=9,
                 color=VERM)
-    ax.annotate(f"{after:g}", xy=(after, y), xytext=(0, 5),
-                textcoords="offset points", ha="center", fontsize=6.5,
+    ax.annotate(f"{after:g}", xy=(after, y), xytext=(0, 7),
+                textcoords="offset points", ha="center", fontsize=9,
                 color=BLUE)
 ax.set_xscale("log")
 ax.set_yticks(ys)
@@ -128,9 +131,9 @@ ax.set_xticks([0.1, 1, 10, 100])
 ax.set_xticklabels(["0.1", "1", "10", "100"])
 ax.set_xlabel("ms per step (log)")
 ax.grid(True, axis="x")
-legend = [Line2D([], [], marker="o", ls="none", ms=5, color=VERM,
+legend = [Line2D([], [], marker="o", ls="none", color=VERM,
                  mew=0, label="before"),
-          Line2D([], [], marker="o", ls="none", ms=5, color=BLUE,
+          Line2D([], [], marker="o", ls="none", color=BLUE,
                  mew=0, label="after")]
 ax.legend(handles=legend, loc="upper left", ncol=2,
           handletextpad=0.3, borderaxespad=0.1, columnspacing=0.9)
@@ -139,10 +142,10 @@ ax.legend(handles=legend, loc="upper left", ncol=2,
 for x, v, c, h in ((0, 23, VERM, ps.HATCHES[0]), (1, 93, BLUE, ps.HATCHES[1])):
     axb.bar([x], [v], width=0.62, color=c, hatch=h, edgecolor="black",
             linewidth=0, zorder=3)
-    axb.annotate(f"{v}%", xy=(x, v), xytext=(0, 2),
-                 textcoords="offset points", ha="center", fontsize=7.5)
+    axb.annotate(f"{v}%", xy=(x, v), xytext=(0, 3),
+                 textcoords="offset points", ha="center", fontsize=10)
 axb.set_xticks([0, 1])
-axb.set_xticklabels(["before", "after"], fontsize=7.5)
+axb.set_xticklabels(["before", "after"])
 axb.set_ylim(0, 105)
 axb.set_yticks([0, 50, 100])
 axb.set_ylabel("GPU busy (%)")
@@ -153,15 +156,17 @@ save(fig, "fig_breakdown")
 # Fig. 5 -- GPU strong (left) + weak (right) scaling
 # ----------------------------------------------------------------------------
 
+# Listed top curve first so PSSG style i (color, marker, dash) and the
+# legend both follow the curves top-to-bottom.
 strong = [
-    ("604M",  [16, 32, 64],  [0.1619, 0.0934, 0.0722], VERM),
+    ("1.36B", [32, 64, 128], [0.1875, 0.1081, 0.0839], VERM),
     ("906M",  [16, 32, 64],  [0.2377, 0.1313, 0.0831], BLUE),
-    ("1.36B", [32, 64, 128], [0.1875, 0.1081, 0.0839], GREEN),
+    ("604M",  [16, 32, 64],  [0.1619, 0.0934, 0.0722], GREEN),
 ]
 
 
 weak = [
-    ("29.5M/GPU (production load)", [4, 8, 16, 32, 64],
+    ("29.5M/GPU", [4, 8, 16, 32, 64],
      [149.4, 156.7, 158.5, 162.9, 165.7], VERM),
     ("10.5M/GPU", [4, 8, 16, 32, 64],
      [53.2, 52.7, 57.6, 60.0, 63.6], BLUE),
@@ -170,10 +175,10 @@ weak = [
 ]
 
 # strong scaling, full single column
-fig, a1 = plt.subplots(figsize=(3.45, 2.2))
+fig, a1 = plt.subplots(figsize=ps.FIGSIZE)
 a1.set_xscale("log", base=2)
 for i, (name, gs, ts, col) in enumerate(strong):
-    a1.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i), lw=1.1, ms=4.5,
+    a1.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i),
             color=col, mew=0, zorder=3, label=name)
 a1.set_xticks([16, 32, 64, 128])
 a1.set_xticklabels(["16", "32", "64", "128"])
@@ -183,16 +188,17 @@ a1.set_yticklabels(["0.05", "0.10", "0.15", "0.20", "0.25"])
 a1.minorticks_off()
 a1.set_xlabel("GPUs")
 a1.set_ylabel("s per step")
+a1.set_title("GPU strong scaling at three problem sizes")
 a1.legend(loc="upper right")
 a1.grid(True, axis="y")
 fig.tight_layout(pad=0.3)
 save(fig, "fig_scaling")
 
 # weak scaling, full single column
-fig, a2 = plt.subplots(figsize=(3.45, 2.0))
+fig, a2 = plt.subplots(figsize=ps.FIGSIZE)
 a2.set_xscale("log", base=2)
 for i, (name, gs, ts, col) in enumerate(weak):
-    a2.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i), lw=1.1, ms=4.5,
+    a2.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i),
             color=col, mew=0, label=name)
 a2.set_xticks([4, 8, 16, 32, 64])
 a2.set_xticklabels(["4", "8", "16", "32", "64"])
@@ -201,6 +207,7 @@ a2.set_ylim(0, 200)
 a2.set_yticks([0, 50, 100, 150, 200])
 a2.set_xlabel("GPUs")
 a2.set_ylabel("ms per step")
+a2.set_title("GPU weak scaling at three per-GPU loads")
 a2.legend(loc="center left")
 a2.grid(True, axis="y")
 fig.tight_layout(pad=0.3)

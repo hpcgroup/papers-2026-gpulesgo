@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 import pssg_style as ps
 from pssg_style import VERM, BLUE, GREEN, GRAY, LGRAY
 
-ps.apply()
+ps.apply(env=True)
+# a notch above the PSSG defaults: this plot carries per-point labels
+plt.rcParams.update({"font.size": 11.5, "lines.markersize": 10})
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,7 +29,7 @@ BW_TBS = 2.039     # A100-80 HBM2e
 PEAK_TF = 9.7      # FP64 (FMA)
 RIDGE = PEAK_TF / BW_TBS
 
-fig, ax = plt.subplots(figsize=(3.45, 2.4))
+fig, ax = plt.subplots(figsize=ps.FIGSIZE)
 ax.set_xscale("log")
 ax.set_yscale("log")
 
@@ -35,32 +37,34 @@ ax.set_yscale("log")
 import numpy as np
 xs = np.logspace(-1.5, 2.0, 64)
 roof = np.minimum(BW_TBS * xs, PEAK_TF)
-ax.plot(xs, roof, lw=1.1, color=GRAY, zorder=2)
+ax.plot(xs, roof, color=GRAY, zorder=2)
 ax.annotate("2.04 TB/s HBM", xy=(0.115, 0.115 * BW_TBS * 1.35), color=GRAY,
-            fontsize=7, rotation=43, ha="left", va="bottom")
+            fontsize=10.5, rotation=35, ha="left", va="bottom")
 ax.annotate("9.7 TF/s FP64", xy=(11, PEAK_TF * 1.18), color=GRAY,
-            fontsize=7, ha="left", va="bottom")
-ax.axvline(RIDGE, ls=ps.dashes(2), lw=0.7, color=LGRAY, zorder=1)
+            fontsize=10.5, ha="left", va="bottom")
+ax.axvline(RIDGE, ls=ps.dashes(2), lw=1.0, color=LGRAY, zorder=1)
 
 cols = {0: BLUE, 1: VERM, 2: GREEN}
 mks = {0: ps.MARKERS[0], 1: ps.MARKERS[1], 2: ps.MARKERS[2]}
+MS = plt.rcParams["lines.markersize"] ** 2   # fixed marker area; time share not encoded
 for name, ai, tf, share, cls in fams:
-    ax.scatter([ai], [tf], s=30 + 9 * share**0.9, color=cols[cls],
+    ax.scatter([ai], [tf], s=MS, color=cols[cls],
                marker=mks[cls], zorder=3, linewidths=0)
+# name: (x, y, offset in points, horizontal alignment)
 lab = {
-    "convection":       (0.074, 0.13, (4, -11)),
-    "SGS":              (0.163, 0.26, (5, -3)),
-    "pressure":         (0.063, 0.11, (-4, 6)),
-    "regular\\_fft":    (1.471, 1.73, (-6, -14)),
-    "vector\\_fft":     (1.886, 3.13, (5, 3)),
-    "ATM force proj.":  (33.57, 2.70, (-4, 6)),
-    "ATM sampling":     (4.805, 0.40, (-8, 8)),
+    "convection":       (0.074, 0.13, (7, -16), "left"),
+    "SGS":              (0.163, 0.26, (8, -5), "left"),
+    "pressure":         (0.063, 0.11, (-12, 13), "left"),
+    "regular\\_fft":    (1.471, 1.73, (-8, -16), "left"),
+    "vector\\_fft":     (1.886, 3.13, (8, 5), "left"),
+    "ATM force proj.":  (33.57, 2.70, (0, 12), "center"),
+    "ATM sampling":     (4.805, 0.40, (0, 12), "center"),
 }
-for name, (x, y, off) in lab.items():
-    ax.annotate(name.replace("\\_", "_"), xy=(x, y), xytext=off,
-                textcoords="offset points", fontsize=6.5, color="#333333")
+for name, (x, y, off, ha) in lab.items():
+    ax.annotate(name.replace("\\_", "_"), xy=(x, y), xytext=off, ha=ha,
+                textcoords="offset points", fontsize=10.5, color="#333333")
 
-handles = [plt.Line2D([], [], ls="none", marker=mks[c], color=cols[c], ms=5,
+handles = [plt.Line2D([], [], ls="none", marker=mks[c], color=cols[c], ms=MS**0.5,
                       label=t) for c, t in
            ((0, "hand-written"), (1, "cuFFT"), (2, "actuator line"))]
 ax.legend(handles=handles, loc="lower right", handletextpad=0.3,
@@ -69,6 +73,7 @@ ax.set_xlim(0.03, 110)
 ax.set_ylim(0.05, 22)
 ax.set_xlabel("arithmetic intensity (FLOP/byte)")
 ax.set_ylabel("TFLOP/s")
+ax.set_title("Roofline of the production step on A100")
 ax.grid(True, which="major", axis="both")
 fig.tight_layout(pad=0.3)
 fig.savefig(os.path.join(OUT, "fig_roofline.pdf"))
