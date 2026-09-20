@@ -8,8 +8,8 @@ production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\linewidth]{figs/fig_tridag.pdf}
-\caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves ranks idle during elimination. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
+\includegraphics[width=\linewidth]{figs/fig4_lesgo_pipeline.pdf}
+\caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves ranks idle. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
 \label{fig:tridag}
 \end{figure}
 
@@ -77,28 +77,32 @@ while exposing enough parallel work per call to fully occupy the device.
 \label{fig:overlap}
 \end{figure}
 
-Evaluating blade forces in the actuator-line model
-(\texttt{ComputeBladeForces()} in Algorithm~\ref{alg:step}) requires
-branch-heavy lookup table interpolations over airfoil polar data.
-Because this table-driven calculation is branch-intensive and suits CPU
-cores far better than GPUs, we retain it on the host as a validated
-engineering routine. Although host--device transfer at this coupling
-point is compact ($\sim$260\,KB per step), host execution requires
-$\sim$28\,ms per step. Executing this routine synchronously would stall
-the GPU on every time step, so we hide it by overlapping it with the GPU
+We initially ported every computational stage to the GPU, but found that
+blade-force evaluation in the actuator-line model
+(\texttt{ComputeBladeForces()} in Algorithm~\ref{alg:step}) actually ran
+\emph{slower} on the device. 
+The production case involves only 10,800 actuator points, far too few
+to saturate a GPU. Moreover, each point traverses a data-dependent path
+through the airfoil polar lookup, causing warps to serialize.
+Kernel-launch and data-transfer overheads therefore exceed the useful
+computation. We accordingly keep this routine. 
+This decision, however, introduces a new challenge. Host execution
+costs $\sim$28\,ms per step, and running it synchronously would leave
+the GPU idle at every time step.
+We address this by overlapping host computation with concurrent device
 work.
 
-Because blade force evaluation reads velocity values produced at the 
-start of the time step and its outputs are not consumed until the force 
-projection stage later in the step, host execution can occur flexibly 
-anywhere in between. The convection stage provides ideal computation 
-cover. We therefore split the actuator-line model into two decoupled 
-phases (Fig.~\ref{fig:overlap}). Phase 1 samples blade-point velocities 
-on the GPU and transfers the compact data packet to the host. It returns 
-control immediately without flushing the device queue, enabling the GPU 
-to execute convection kernels while the CPU evaluates aerodynamic forces
-concurrently. Phase 2 uploads the calculated forces and projects them 
-onto the Eulerian grid. 
+Such overlap is feasible because blade-force evaluation only reads
+velocities produced at the start of the time step, and its outputs are
+not consumed until the force-projection stage later in the step. We
+exploit this slack by splitting the actuator-line model into two
+decoupled phases around the convection stage
+(Fig.~\ref{fig:overlap}). Phase~1 samples blade-point velocities on the
+GPU and transfers the compact data packet to the host, returning control
+immediately without flushing the device queue. The GPU then proceeds
+with convection while the CPU evaluates aerodynamic forces concurrently.
+Phase~2 uploads the calculated forces and projects them onto the
+Eulerian grid. 
 This overlap removes host computation from the critical path, saving
 30\,ms per step and raising overall GPU utilization to
 \textbf{93\%}. This pattern generalizes to any host routine whose inputs
