@@ -1,0 +1,23 @@
+name: Paper Static Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      latex_root:
+        description: "LaTeX project root directory"
+        required: false
+        default: "."
+        type: string
+      strict:
+        description: "Fail workflow when static checks fail"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  static-check:
+    uses: hpcgroup/pssg-paper-checker/.github/workflows/static-check.yml@paper-check-workflow
+    with:
+      checker_ref: paper-check-workflow
+      latex_root: ${{ inputs.latex_root }}
+      strict: ${{ inputs.strict }}
