@@ -40,20 +40,23 @@ strategies in directive-based ports.
 \end{figure}
 
 % \vspace{0.08in}
-\textbf{Array Mirroring.} Our reference baseline configuration 
-($256^3$ grid with two wind turbines on 4 A100 GPUs) adopts array 
-mirroring, the conventional strategy in directive-based 
-ports~\cite{esclapez2025dales,giorgetta2022}. 
-This approach mirrors host arrays on the device and synchronizes 
-them at module boundaries so that unported host code receives 
-updated state. However, \texttt{Nsight Systems} 
-profiling reveals that only 13\,ms of a 220\,ms time step is attributed to
-GPU execution. PCIe transfers and host-side synchronization account for 
-the remaining 207\,ms, which keeps the GPU \textbf{94\% idle}
-(Fig.~\ref{fig:mirroring}). The primary bottleneck is a full-field
-synchronization of twelve $O(N^3)$ arrays (420\,MB per step). 
-Furthermore, array mirroring allocates unnecessary device memory, 
-which consumes valuable GPU memory resources and reduces usability.
+\textbf{Array Mirroring.} When the solver state fits comfortably in device memory, mirroring every
+host array on the device is an effective strategy, as all kernels can
+move to the GPU and data returns to the host only for diagnostics and
+checkpoints~\cite{esclapez2025dales,giorgetta2022}. LESGO, however,
+does not fit this mold for two reasons. First, its state comprises
+dozens of $O(N^3)$ fields plus $3/2$-padded spectral scratch, so
+duplicating arrays that no kernel reads wastes device memory and increases the number of GPUs a
+given grid requires. Second, several routines run slower on the GPU than
+on CPUs, and should therefore remain on the host. Mirroring
+consequently still requires PCIe transfers wherever these host-resident
+routines consume solver state. On our reference configuration ($256^3$
+grid with two wind turbines on 4 A100 GPUs), \texttt{Nsight Systems}
+profiling reveals that only 13\,ms of a 220\,ms time step is spent on
+GPU execution. PCIe transfers and host-side synchronization account for
+the remaining 207\,ms, leaving the GPU \textbf{94\% idle}
+(Fig.~\ref{fig:mirroring}). The dominant bottleneck is a full-field
+synchronization of twelve $O(N^3)$ arrays (420\,MB per step).
 
 % \begin{figure}[h]
 % \centering
@@ -71,15 +74,13 @@ directive-based ports. However, evaluating CUDA managed memory
 (Section~\ref{sec:setup}) across 16 A100 GPUs yields limited acceleration. 
 Using \texttt{nsys} profiling, we found that
 extensive page faults and data migration overheads inherent to
-demand-paged unified memory~\cite{chien2019um} severely stall execution:
-the pressure solve alone takes 0.97\,s of the 1.58\,s step, whereas the
-whole step takes 0.201\,s under explicit residency.
+demand-paged unified memory~\cite{chien2019um} severely stall execution.
 
-These performance gaps demonstrate that for complex multiphysics solvers
-with heterogeneous coupling points, default data-placement strategies
-are insufficient. Achieving high GPU efficiency requires fine-grained,
-structure-aware control over data residency and host--device transfer
-footprints.
+Both profiles point to the same root cause. After the compute kernels
+move to the GPU, certain routines still execute on the host and demand
+full-field data transfers to do so. Achieving high GPU efficiency therefore 
+requires fine-grained, structure-aware control over data residency and
+host--device transfer footprints.
 
 \subsection{Consumer-Driven Explicit Residency}
 \label{sec:method-taxonomy}

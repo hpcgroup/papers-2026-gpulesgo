@@ -55,27 +55,28 @@ Pseudo-spectral multiphysics LES has recurring host--device
 device-resident state. They vary widely in how much of the field they
 touch and how often, so no single blanket data-placement policy fits
 them all. The two data strategies common to directive-based ports both
-encounter severe limitations here. (1)~Array mirroring, whether 
-wholesale~\cite{esclapez2025dales} or selective~\cite{giorgetta2022}, 
-synchronizes data at module boundaries. However, servicing coupling 
-points over PCIe still leaves the GPU largely idle.
-Moreover, blanket duplication wastes device memory on unconsumed arrays,
-restricting per-GPU grid capacity.
+encounter severe limitations here. (1)~Array mirroring keeps a device
+copy of host array, so kernels read device-resident state and data
+returns to the host only where host code still consumes
+it~\cite{esclapez2025dales,giorgetta2022}. This determines where the data 
+lives but leaves open how to serve the remaining host consumers efficiently, 
+since each full-field transfer back to the host stalls the GPU. Mirroring every
+array also consumes device memory, so that LESGO needs more GPUs for the
+same problem size.
 (2)~Delegating placement to CUDA managed memory lets the driver migrate
 pages on demand, a route that minimizes porting effort and underpins
 Fortran standard-parallelism offloading~\cite{caplan2023dc}, yet it
 hides traffic from the source code and incurs page-migration overheads 
 across a range of GPU workloads~\cite{chien2019um}.
-Thus, achieving high performance for LESGO requires developing a
-fine-grained data residency strategy tailored to its distinct
-host--device coupling points.
+Thus, achieving high performance for LESGO requires a fine-grained data
+residency strategy tailored to its distinct host--device coupling points.
 
 In this paper, we present our approach to porting the Fortran solver in LESGO
 to GPGPUs. The port preserves the solver's validated physics and brings
 production-scale wind-farm LES within practical reach. We begin by measuring
-the two placement strategies above, array mirroring and CUDA managed memory,
-on LESGO itself, and trace the bottleneck to host--device coupling
-points. Guided by this analysis, we analyze all coupling points across the solver,
+two placement strategies on LESGO, array mirroring and
+CUDA managed memory, and trace the bottleneck in both to host--device
+coupling points. Guided by this analysis, we analyze all coupling points across the solver,
 classify them by host consumer read footprints, and apply four treatments: 
 \emph{gate} skips a transfer whenever its
 conditional or infrequent consumer does not execute; \emph{relocate} ports
@@ -107,6 +108,7 @@ work items to mitigate kernel launch overhead, and CPU--GPU
 heterogeneous execution to overlap residual host physics with the GPU
 backlog.
 \item We evaluate the GPU version at production scale on a 604M-cell, 60-turbine 
-wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline.
+wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline at
+equal node count and up to 90$\times$ on 64 GPUs.
 We also demonstrate scaling up to 128 GPUs on a 1.36 billion-cell grid. 
 \end{itemize}

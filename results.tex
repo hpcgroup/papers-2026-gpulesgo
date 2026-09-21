@@ -111,6 +111,9 @@ from 32 to 64 GPUs on the 1.36B-cell grid, reducing step time from
 0.188\,s to 0.108\,s. On this largest grid, scaling extends to 128 GPUs
 at 0.084\,s per time
 step, achieving a throughput of 16.2 billion cell updates per second.
+On the production 604M-cell grid, 64 GPUs bring the step to 0.072\,s,
+a 90$\times$ speedup over the fastest CPU configuration
+(Table~\ref{tab:progression}).
 
 \begin{figure}[h]
     \centering

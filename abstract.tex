@@ -13,5 +13,6 @@ coupling points across the solver and classify them into four treatments. On
 this foundation, we propose several optimizations, including chunk pipelining
 across serial rank chains, batching many small work items, and heterogeneous
 CPU--GPU execution.  Evaluation on a 60-turbine wind farm discretized into 604 million cells
-demonstrates a 40$\times$ speedup over the best-performing CPU baseline and
-strong scaling up to 128 GPUs on a 1.36 billion cell grid.
+demonstrates a 40$\times$ speedup over the best-performing CPU baseline at
+equal node count, rising to 90$\times$ on 64 GPUs, and strong scaling to
+128 GPUs on a 1.36 billion cell grid.
