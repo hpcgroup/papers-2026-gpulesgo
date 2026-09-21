@@ -3,7 +3,7 @@ porting practices. Unless noted
 otherwise, all performance measurements correspond to the 604M-cell
 production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 
-\subsection{Chunk pipelining across serial rank chains}
+\subsection{Chunk Pipelining across Serial Rank Chains}
 \label{sec:opt-tridag}
 
 \begin{figure}[h]
@@ -29,7 +29,7 @@ arithmetic~\cite{laszlo2016,kim2021pascal}, our pipelined approach
 leaves the inner Thomas loops untouched, ensuring results equivalence
 with the sequential baseline.
 
-\subsection{Batching many small work items}
+\subsection{Batching Many Small Work Items}
 \label{sec:opt-batch}
 
 Several solver components decompose into many small, independent work
@@ -54,7 +54,7 @@ allocations from the time loop, which
 accelerated all other GPU solver stages by 15--18\%.
 
 The Lagrangian scale-dependent (LASD) subgrid-scale model
-(\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) shows the
+(\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) demonstrates the
 same fragmentation. Each update filters nine 3D tensor fields at two 
 test-filter scales: for every horizontal plane, it applies forward 2D FFTs, 
 damps selected wavenumber modes, and applies inverse 2D FFTs. 
@@ -67,7 +67,7 @@ a single batched cuFFT call filters all vertical levels of a field at
 once. This consolidation collapses thousands of launches into a few dozen
 while exposing enough parallel work per call to fully occupy the device.
 
-\subsection{Heterogeneous CPU--GPU execution}
+\subsection{Heterogeneous CPU--GPU Execution}
 \label{sec:opt-overlap}
 
 \begin{figure}[h]
@@ -109,7 +109,7 @@ This overlap removes host computation from the critical path, saving
 remain fixed at a known stage of the time step, effectively turning the
 CPU into a coprocessor for code that resists GPU offloading.
 
-\subsection{Experiences porting to modern GPUs}
+\subsection{Experiences Porting to Modern GPUs}
 \label{sec:opt-impl}
 
 Beyond the optimizations above, we identified three general practices from

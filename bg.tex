@@ -1,6 +1,6 @@
 This section introduces the numerical formulation and physical models of LESGO and provides a brief overview of the OpenACC programming model.
 
-\subsection{Pseudo-spectral LES formulation}
+\subsection{Pseudo-spectral LES Formulation}
 \label{sec:bg-numerics}
 
 LESGO solves the filtered incompressible Navier--Stokes equations in
@@ -41,7 +41,7 @@ including ports of finite-difference codes such as CaNS~\cite{costa2018,costa202
 and AFiD~\cite{zhu2018afid}, or custom asynchronous redesigns of 
 pseudo-spectral codes~\cite{ravikumar2019}.
 
-\subsection{Dynamic SGS and actuator-line turbine models}
+\subsection{Dynamic SGS and Actuator-Line Turbine Models}
 \label{sec:bg-physics}
 
 Two physics components dominate both the scientific fidelity and the
@@ -86,7 +86,7 @@ contamination. Furthermore, its horizontally periodic formulation
 directly models the fully developed wind-farm boundary layer that 
 forms the foundation for atmospheric parameterizations. 
 
-\subsection{GPU acceleration with OpenACC}
+\subsection{GPU Acceleration with OpenACC}
 \label{sec:bg-openacc}
 
 Early GPU acceleration efforts in atmospheric modeling relied either on 

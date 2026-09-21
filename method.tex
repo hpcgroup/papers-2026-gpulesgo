@@ -230,7 +230,7 @@ the host. This split matches the slice scenario identified above,
 where the compute-intensive batched solve stays on the GPU, the
 CPU-friendly serial recurrence stays on the host, and the transfer
 shrinks to the consumer footprint.
-The naive port bracketed this lightweight host
+Our initial port bracketed this lightweight host
 computation with full 3D field transfers, resulting in three 34\,MB
 round trips per step. The slice instead transfers only the
 $\sim$1\,KB input column to the host, evaluates the exact same
