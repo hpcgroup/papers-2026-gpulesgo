@@ -1,15 +1,15 @@
-In this section, we first outline the algorithmic structure of a 
-single time step of LESGO. Then, we analyze the scaling limits of 
-the CPU implementation that motivate our GPU acceleration strategy.
+In this section, we first outline the sequential algorithm of a 
+single time step of LESGO. Then, we describe its MPI parallelization and 
+analyze the scaling limits that motivate our GPU acceleration strategy.
 
 \subsection{Structure of a Time Step}
 
 LESGO follows a conventional time-marching structure. The solver
-state comprises the three filtered velocity components \fix{are the three components the x, y, z directions? its not clear from just looking at Eq 1}  of Eq.~\ref{eq:les},
-held on the slab-decomposed grid (Section~\ref{sec:bg-impl}). \fix{if you are talking about the sequential structure, why do you need to talk about slab decomposed grid right now?} Each
+state comprises the three filtered velocity components of Eq.~\ref{eq:les}
+along the streamwise ($x$), spanwise ($y$), and vertical ($z$) directions. Each
 pass of the main time loop in Algorithm~\ref{alg:step} executes three 
 primary phases: (1)~assembling the right-hand-side (RHS) convective, 
-turbulent, and boundary force terms (lines 3--15), (2)~advancing the 
+turbulent, and boundary force terms (lines 4--15), (2)~advancing the 
 velocity to an intermediate state via second-order
 Adams--Bashforth integration (line 16), and (3)~enforcing incompressibility 
 through a Poisson pressure solve and velocity projection step (lines 17--21). 
@@ -17,7 +17,7 @@ through a Poisson pressure solve and velocity projection step (lines 17--21).
 turbine geometry at startup, while \texttt{Finalize()} outputs final diagnostics 
 and checkpoints. Inside the loop, \texttt{ComputeDt()} dynamically evaluates 
 the time step according to the Courant--Friedrichs--Lewy (CFL) stability 
-condition, requiring a global \texttt{MPI\_Allreduce} collective across all processes. \fix{don't need to mention MPI yet}
+condition.
 Below, we describe the execution flow of a single time step in detail.
 
 
@@ -53,30 +53,28 @@ Below, we describe the execution flow of a single time step in detail.
 \end{algorithm}
 
 \stagelead{stgderiv}{Derivatives} (lines 4--5). Evaluating the RHS
-terms of Eq.~\ref{eq:les} requires velocity gradients, since the SGS
-stress depends on the strain-rate tensor and the rotational convective
-term on vorticity. Horizontal derivatives are computed spectrally via
+terms of Eq.~\ref{eq:les} requires velocity gradients, since both the SGS
+stress and the convective term depend on them. Horizontal derivatives are computed spectrally via
 2D forward and inverse FFTs on each $x$-$y$ plane, whereas vertical
-derivatives use second-order centered differences that read one ghost
-plane exchanged with neighboring processes. This operation forms a uniform,
+derivatives use second-order centered differences between adjacent
+planes. This operation forms a uniform,
 memory-streaming sweep across the 3D domain. \texttt{WallStress()}
-then applies the logarithmic law-of-the-wall model
-(Section~\ref{sec:bg-numerics}) to compute surface shear stress on
-the boundary processes.
+then applies a wall model
+(Section~\ref{sec:bg-numerics}) to compute the shear stress on
+the domain boundaries.
 
-\stagelead{stgsgs}{SGS} (lines 6--10). Subgrid-scale closure models the 
-unresolved turbulent fluxes. Every $c$-th step ($c=5$ in production runs), 
-\texttt{UpdateLASDCoefficient()} updates the dynamic Lagrangian scale-dependent (LASD) 
-model coefficient $C_s^2$ (Section~\ref{sec:bg-physics}) by applying two 
-spectral test filters and advecting dynamic model accumulators along fluid particle 
-trajectories, making it the most computationally irregular and memory-bound routine 
+\stagelead{stgsgs}{SGS} (lines 6--10). The SGS model accounts for turbulent 
+motions smaller than the grid spacing. Every $c$-th step ($c=5$ in production runs), 
+\texttt{UpdateLASDCoefficient()} updates the LASD model coefficient 
+(Section~\ref{sec:bg-physics}) by applying two FFT-based filters and 
+averaging along fluid-particle trajectories, making it the most computationally irregular and memory-bound routine 
 in the solver (Section~\ref{sec:opt-batch}). On every step, \texttt{SGSStress()} 
-recalculates the eddy viscosity $\nu_t = C_s^2 \Delta^2 |S|$ using the current 
-strain rate and computes the subgrid stress tensor, after which 
+computes the SGS stress from this coefficient and the current velocity 
+gradients, after which 
 \texttt{StressDivergence()} calculates its spatial divergence.
 
 \stagelead{stgconv}{Convection} (line 11). To eliminate aliasing errors 
-arising from non-linear convective terms in rotational form, LESGO employs 
+in the nonlinear convective term, LESGO employs 
 the standard $3/2$-rule dealiasing scheme. Each velocity and vorticity 
 component undergoes forward and inverse 2D horizontal FFTs on an
 expanded ($1.5\times$ padded) grid. Convection represents the most 
@@ -86,12 +84,11 @@ FFT-intensive phase of the time step.
 (ALM) represents wind turbine blades as localized aerodynamic force 
 sources in Eq.~\ref{eq:les}. \texttt{SampleBladeVelocities()}
 samples flow velocities at discrete blade actuator points via 
-trilinear 3D spatial interpolation.
-\texttt{ComputeBladeForces()} calculates angle of attack, 
-relative velocity, and lift/drag forces using lookup tables of empirical 
-airfoil polar data. Finally, \texttt{SpreadBladeForces()} projects
-these forces back onto surrounding fluid grid points using 3D Gaussian
-spatial regularization.
+trilinear interpolation.
+\texttt{ComputeBladeForces()} calculates lift and drag forces 
+from lookup tables of airfoil data. Finally, \texttt{SpreadBladeForces()} projects
+these forces back onto surrounding fluid grid points using a Gaussian
+kernel.
 
 \stagelead{stgpress}{Pressure} (lines 16--20). The intermediate velocity 
 field computed by \texttt{AdvanceAB2()} is generally not divergence-free, so 
@@ -99,17 +96,14 @@ its divergence acts as the source term for a 3D Poisson equation for
 modified pressure. \texttt{PoissonFFT()} transforms the RHS into
 horizontal wave space, decoupling horizontal modes into independent
 1D vertical tridiagonal linear systems along $z$. \texttt{PoissonTridiag()}
-solves these systems across the vertical stack of MPI processes (Section~\ref{sec:opt-tridag}),
+solves these systems with the Thomas algorithm (Section~\ref{sec:opt-tridag}),
 and \texttt{PoissonInvFFT()} returns the pressure and its horizontal
 gradients to physical space, with the vertical gradient evaluated by
-finite differencing. Pressure is the only solver stage requiring
-fine-grained, globally coupled communication across all processes in the vertical stack.
+finite differencing.
 
 \stagelead{stgproj}{Projection} (line 21). \texttt{ProjectVelocity()} 
-subtracts the pressure gradient from the intermediate velocity to project 
-the flow onto solenoidal (divergence-free) space. Finally, point-to-point 
-halo exchanges refresh the single-plane ghost layers to prepare velocity 
-fields for the subsequent time step's derivative calculations.
+subtracts the pressure gradient from the intermediate velocity to make 
+the flow divergence-free.
 
 \subsection{MPI Slab Decomposition and Scaling Ceiling}
 \label{sec:bg-impl}
@@ -125,11 +119,15 @@ turbulence scalars, are stored as 3D Fortran arrays.
 
 Inter-process communication in this slab topology follows three main patterns.
 First, vertical finite-difference stencils require nearest-neighbor halo 
-exchanges of single horizontal planes between adjacent processes. Second, 
+exchanges of single horizontal planes between adjacent processes, and 
+\texttt{ProjectVelocity()} ends with such an exchange to refresh the ghost 
+planes for the next step. Second, 
 the pressure Poisson solve induces global coupling across all processes, 
 as each vertical tridiagonal system spans the entire domain height after 
 horizontal spectral transformation (Section~\ref{sec:opt-tridag}).
-Third, small collective reductions execute CFL time-step control, runtime 
+Pressure is thus the only stage with fine-grained, globally coupled 
+communication. Third, small collective reductions (\texttt{MPI\_Allreduce}) 
+execute CFL time-step control in \texttt{ComputeDt()}, runtime 
 diagnostic logging, and per-turbine force aggregation. By avoiding 2D 
 domain transposes, this 1D slab decomposition keeps computationally 
 intensive horizontal FFTs local to each process at the expense of a globally coupled 

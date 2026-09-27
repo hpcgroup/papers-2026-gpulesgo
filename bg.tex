@@ -16,9 +16,11 @@ rotational form for high-Reynolds-number ABL flow,
 \label{eq:les}
 \end{equation}
 %
-where $\tilde{u}_i$ is the filtered velocity, \fix{what is $\tilde{u}_j$?} $\tilde{p}^{*}$ is the 
-modified pressure, $\tau_{ij}$ is the subgrid-scale (SGS) stress tensor, 
-and $f_i$ represents body forces, including turbine forcing. The horizontal 
+where $\tilde{u}_i$ is the filtered velocity, $i,j \in \{1,2,3\}$ index
+the spatial directions with summation over the repeated index $j$,
+$\tilde{p}^{*}$ is the modified pressure, $\tau_{ij}$ is the
+subgrid-scale (SGS) stress tensor, and $f_i$ represents body forces,
+including turbine forcing. The horizontal
 directions are periodic and discretized using Fourier collocation, whereas 
 vertical derivatives are evaluated with second-order centered finite 
 differences on a staggered grid. Dealiasing of nonlinear terms via the $3/2$ 
