@@ -9,7 +9,7 @@ scaling behavior.
 \centering
 \caption{Cumulative speedup of optimizations on 4 nodes, 16 A100 GPUs for the
 production benchmark (604M cells, 60 turbines) against the fastest
-CPU baseline (4 nodes, 512 ranks, Fig.~\ref{fig:ceiling}).}
+CPU baseline (4 nodes, 512 processes, Fig.~\ref{fig:ceiling}).}
 \label{tab:progression}
 \footnotesize
 \begin{tabular}{@{}lrr@{}}
@@ -44,7 +44,7 @@ Then, relocating the actuator-line coupling onto the device
 (\S\ref{sec:opt-batch}) removes the last recurring full-field PCIe
 crossings and shortens the step by $2.3\times$. Pipelining the
 distributed tridiagonal solve (\S\ref{sec:opt-tridag}) converts the
-serialized rank chain of the pressure solver into overlapped chunk
+serialized process chain of the pressure solver into overlapped chunk
 waves for a further $1.9\times$. Batching the 60 turbines into single
 kernels and one packed reduction (\S\ref{sec:opt-batch}) removes the
 per-instance launch overhead for another $1.6\times$, and hiding the
@@ -99,7 +99,8 @@ reference setup.
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling.pdf}
 \caption{Strong scaling of the wind-farm case at three problem
-sizes.}
+sizes. Labels on the 604M curve give the speedup over the fastest CPU
+configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
 \end{figure}
 
@@ -161,7 +162,7 @@ cuFFT library kernel, beyond the reach of application-level tuning.
 \end{figure}
 
 Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
-a fixed grid size and the domain grows vertically with rank count.
+a fixed grid size and the domain grows vertically with process count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
 64 GPUs). The other two problem sizes exhibit similarly strong weak-scaling
@@ -170,7 +171,7 @@ each GPU carries a sufficiently large workload, which is the regime
 that production runs occupy. These results demonstrate the effectiveness
 of optimizations presented in Section~\ref{sec:method} and ~\ref{sec:opt}.
 
-While a 2D pencil decomposition could extend rank limits further, the
+While a 2D pencil decomposition could scale to larger process counts, the
 1D slab structure fully satisfies our target physics. LESGO does not
 pursue ever-larger wind-farm domains. It instead resolves the
 turbulence physics of horizontally periodic atmospheric boundary
@@ -209,7 +210,7 @@ codebase.
 % 141\,GB H200 GPUs execute the same simulation with half the GPU count.
 % Furthermore, H200 GPUs deliver a 26\% higher per-device throughput
 % (236 versus 188 million cell updates per second per GPU) because
-% halving the rank count doubles slab thickness and reduces inter-rank halo
+% halving the process count doubles slab thickness and reduces inter-process halo
 % and pipeline communication. Consequently, GPU memory capacity directly
 % enhances both simulation scale and computational efficiency in
 % slab-decomposed spectral solvers.

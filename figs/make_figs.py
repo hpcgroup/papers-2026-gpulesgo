@@ -87,7 +87,7 @@ ax.set_yticks([0.2, 0.5, 1, 2, 5, 10, 20])
 ax.set_yticklabels(["0.2", "0.5", "1", "2", "5", "10", "20"])
 ax.set_xlim(15, 512)
 ax.set_ylim(0.11, 20)
-ax.set_xlabel("CPU cores")
+ax.set_xlabel("number of processes")
 ax.set_ylabel("time per step (s)")
 ax.set_title("CPU strong scaling of the production case")
 ax.grid(True, which="major", axis="y")
@@ -180,6 +180,20 @@ a1.set_xscale("log", base=2)
 for i, (name, gs, ts, col) in enumerate(strong):
     a1.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i),
             color=col, mew=0, zorder=3, label=name)
+# 604M is the production case of Fig. 1: label each point with its speedup
+# over the fastest CPU configuration (4 nodes, 512 processes).
+cpu_best = min(tstep)
+_, gs604, ts604, _ = strong[2]
+for g, t in zip(gs604, ts604):
+    lab = f"{cpu_best / t:.0f}$\\times$"
+    if g == gs604[0]:
+        lab += "\nvs. best CPU"
+    # the 16-GPU label sits left-aligned and lower so it clears the
+    # steep 16->32 segment
+    first = g == gs604[0]
+    a1.annotate(lab, xy=(g, t), xytext=(-10, -20) if first else (0, -9),
+                textcoords="offset points", ha="left" if first else "center",
+                va="top", fontsize=11, color=GREEN, linespacing=1.1)
 a1.set_xticks([16, 32, 64, 128])
 a1.set_xticklabels(["16", "32", "64", "128"])
 a1.set_ylim(0.05, 0.25)

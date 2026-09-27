@@ -48,7 +48,7 @@ compares matched executions using one NREL 5-MW turbine with a panel-based
 actuator-line method and 120 actuator points per blade, with both SGS and
 molecular viscosity disabled. Both runs use the same
 cold start, $480\times384\times240$ grid, fixed nondimensional time step
-$\Delta t=0.0014$, and 1,000 steps; the CPU run uses 48 MPI ranks and the
+$\Delta t=0.0014$, and 1,000 steps; the CPU run uses 48 MPI processes and the
 GPU run two A100 GPUs. At the common physical time
 $t=15.4737$\,s, the transient near-wake fields agree to floating-point
 roundoff: the wake-deficit pattern correlation is 1.0, the relative
@@ -87,7 +87,7 @@ two backends are consistent.
 % Panels (a) and (b) show normalized axial velocity on the vertical
 % rotor-center plane using an identical color scale; panel (c) shows the
 % GPU-minus-CPU difference at roundoff scale; and panel (d) compares the
-% hub-height centerline profiles. The CPU run used 48 MPI ranks and the GPU run
+% hub-height centerline profiles. The CPU run used 48 MPI processes and the GPU run
 % used two NVIDIA A100 GPUs.}
 % \label{fig:lesgo-cpu-gpu}
 % \end{figure*}

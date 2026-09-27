@@ -3,13 +3,13 @@ porting practices. Unless noted
 otherwise, all performance measurements correspond to the 604M-cell
 production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 
-\subsection{Chunk Pipelining across Serial Rank Chains}
+\subsection{Chunk Pipelining across Serial Process Chains}
 \label{sec:opt-tridag}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig4_lesgo_pipeline.pdf}
-\caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves ranks idle. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
+\caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves processes idle. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
 \label{fig:tridag}
 \end{figure}
 
@@ -17,14 +17,22 @@ In the spectral Poisson solve (\texttt{PoissonTridiag()} in
 Algorithm~\ref{alg:step}), independent 1D tridiagonal systems along $z$
 arise for each horizontal wavenumber pair. This yields approximately
 $590K$ independent systems of 512 unknowns, each distributed across
-all 16 ranks in 1D slab domain decomposition. Standard forward
+all 16 processes in 1D slab domain decomposition. Standard forward
 elimination and back substitution in the Thomas algorithm operate
-serially along $z$, forcing rank $k$ to idle until rank $k-1$ completes
+serially along $z$, forcing process $k$ to idle until process $k-1$ completes
 its forward pass.
 
-To overcome this serialization, we exploit the mutual independence of these systems by partitioning them into $c$ chunks and pipelining the solve~\cite{povitsky1999,povitsky2000} (Fig.~\ref{fig:tridag}). In forward pass, rank $k$ processes chunk $m$, transmits boundary coefficients downstream to rank $k{+}1$, and immediately proceeds to chunk $m{+}1$.
-Furthermore, chunking eliminates the global turnaround delay between forward elimination and back substitution. Ordinarily, back substitution must wait for the forward sweep to traverse the entire rank chain. Here, the last rank initiates back substitution for chunk $m$ as soon as its forward pass finishes, overlapping the backward wave of early chunks with the forward sweep of later ones. Unlike
-reduced-system libraries that alter the elimination
+To overcome this serialization, we exploit the mutual independence of these 
+systems by partitioning them into $c$ chunks and pipelining the 
+solve~\cite{povitsky1999,povitsky2000} (Fig.~\ref{fig:tridag}). In forward pass, 
+process $k$ handles chunk $m$, transmits boundary coefficients downstream to 
+process $k{+}1$, and immediately proceeds to chunk $m{+}1$.
+Furthermore, chunking eliminates the global turnaround delay between forward 
+elimination and back substitution. Ordinarily, back substitution must wait for 
+the forward sweep to traverse the entire process chain. Here, the last process 
+initiates back substitution for chunk $m$ as soon as its forward pass finishes, 
+overlapping the backward wave of early chunks with the forward sweep of later ones. 
+Unlike reduced-system libraries that alter the elimination
 arithmetic~\cite{laszlo2016,kim2021pascal}, our pipelined approach
 leaves the inner Thomas loops untouched, ensuring results equivalence
 with the sequential baseline.
@@ -43,7 +51,7 @@ For the actuator-line model (\texttt{Turbines()}),
 processing turbines individually repeats device uploads, kernel
 launches, synchronizations, and small collective reductions for each
 turbine, accumulating over 1,000 \texttt{MPI\_Allreduce} operations per
-rank every step. We therefore batch the entire farm into unified device
+process every step. We therefore batch the entire farm into unified device
 operations. Blade-point tables for all turbines reside permanently in
 device memory. We use a single sampling kernel and a single projection kernel
 process all concatenated turbine points, and all reduction quantities

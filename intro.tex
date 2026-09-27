@@ -85,7 +85,7 @@ shrinks a transfer to the subset of the field the host touches; and
 \emph{overlap} hides an irreducible transfer behind concurrent GPU execution.
 Beyond these data-residency treatments, we apply three further optimizations
 to the remaining structural bottlenecks. We pipeline
-independent systems across a serialized rank chain to accelerate the pressure
+independent systems across a serialized process chain to accelerate the pressure
 equation's distributed tridiagonal solve; batch many small work items to
 mitigate kernel launch overhead; and hide residual host-side airfoil physics
 behind device execution through CPU--GPU heterogeneous execution.
@@ -102,8 +102,8 @@ will be open-sourced upon acceptance.
 their host consumer footprints, enforcing minimal data movement through
 four distinct treatments (gate, relocate, slice, and overlap).
 \item We demonstrate three optimizations on the
-solver's coupling-heavy modules: chunk pipelining across serial rank
-chains to hide inter-rank communication delays, batching many small
+solver's coupling-heavy modules: chunk pipelining across serial process
+chains to hide inter-process communication delays, batching many small
 work items to mitigate kernel launch overhead, and CPU--GPU
 heterogeneous execution to overlap residual host physics with the GPU
 backlog.

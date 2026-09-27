@@ -17,7 +17,7 @@ through a Poisson pressure solve and velocity projection step (lines 17--21).
 turbine geometry at startup, while \texttt{Finalize()} outputs final diagnostics 
 and checkpoints. Inside the loop, \texttt{ComputeDt()} dynamically evaluates 
 the time step according to the Courant--Friedrichs--Lewy (CFL) stability 
-condition, requiring a global \texttt{MPI\_Allreduce} collective across all ranks. \fix{don't need to mention MPI yet}
+condition, requiring a global \texttt{MPI\_Allreduce} collective across all processes. \fix{don't need to mention MPI yet}
 Below, we describe the execution flow of a single time step in detail.
 
 
@@ -58,11 +58,11 @@ stress depends on the strain-rate tensor and the rotational convective
 term on vorticity. Horizontal derivatives are computed spectrally via
 2D forward and inverse FFTs on each $x$-$y$ plane, whereas vertical
 derivatives use second-order centered differences that read one ghost
-plane exchanged with neighbor ranks. This operation forms a uniform,
+plane exchanged with neighboring processes. This operation forms a uniform,
 memory-streaming sweep across the 3D domain. \texttt{WallStress()}
 then applies the logarithmic law-of-the-wall model
 (Section~\ref{sec:bg-numerics}) to compute surface shear stress on
-the boundary ranks.
+the boundary processes.
 
 \stagelead{stgsgs}{SGS} (lines 6--10). Subgrid-scale closure models the 
 unresolved turbulent fluxes. Every $c$-th step ($c=5$ in production runs), 
@@ -99,11 +99,11 @@ its divergence acts as the source term for a 3D Poisson equation for
 modified pressure. \texttt{PoissonFFT()} transforms the RHS into
 horizontal wave space, decoupling horizontal modes into independent
 1D vertical tridiagonal linear systems along $z$. \texttt{PoissonTridiag()}
-solves these systems across the MPI rank stack (Section~\ref{sec:opt-tridag}),
+solves these systems across the vertical stack of MPI processes (Section~\ref{sec:opt-tridag}),
 and \texttt{PoissonInvFFT()} returns the pressure and its horizontal
 gradients to physical space, with the vertical gradient evaluated by
 finite differencing. Pressure is the only solver stage requiring
-fine-grained, globally coupled communication across all vertical ranks.
+fine-grained, globally coupled communication across all processes in the vertical stack.
 
 \stagelead{stgproj}{Projection} (line 21). \texttt{ProjectVelocity()} 
 subtracts the pressure gradient from the intermediate velocity to project 
@@ -115,31 +115,31 @@ fields for the subsequent time step's derivative calculations.
 \label{sec:bg-impl}
 
 LESGO is implemented in Fortran~90 and parallelized with MPI using a 1D slab 
-decomposition along the vertical ($z$) axis. Each MPI rank owns a contiguous 
+decomposition along the vertical ($z$) axis. Each MPI process owns a contiguous 
 block of horizontal $z$-planes spanning the full horizontal domain ($x$-$y$). 
-This topology allows 2D horizontal FFTs to execute entirely rank-locally,
+This topology allows 2D horizontal FFTs to execute entirely within each process,
 completely avoiding expensive 2D domain transposes (\texttt{MPI\_Alltoallv})
 required by 2D pencil decompositions~\cite{romero2022}. Primary physical 
 fields, including velocity components, modified pressure, and subgrid 
 turbulence scalars, are stored as 3D Fortran arrays.
 
-Inter-rank communication in this slab topology follows three main patterns.
+Inter-process communication in this slab topology follows three main patterns.
 First, vertical finite-difference stencils require nearest-neighbor halo 
-exchanges of single horizontal planes between adjacent ranks. Second, 
-the pressure Poisson solve induces global coupling across all ranks, 
+exchanges of single horizontal planes between adjacent processes. Second, 
+the pressure Poisson solve induces global coupling across all processes, 
 as each vertical tridiagonal system spans the entire domain height after 
 horizontal spectral transformation (Section~\ref{sec:opt-tridag}).
 Third, small collective reductions execute CFL time-step control, runtime 
 diagnostic logging, and per-turbine force aggregation. By avoiding 2D 
 domain transposes, this 1D slab decomposition keeps computationally 
-intensive horizontal FFTs rank-local at the expense of a globally coupled 
+intensive horizontal FFTs local to each process at the expense of a globally coupled 
 vertical solve.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
     \caption{CPU strong scaling of LESGO on the production wind-farm case of Section~\ref{sec:setup}. 
-    The cross marks 128 ranks on a single node, which exceeds node memory.}
+    The cross marks 128 processes on a single node, which exceeds node memory.}
     \label{fig:ceiling}
 \end{figure}
     
@@ -150,8 +150,8 @@ wind-farm case, which simulates 60 turbines on a 604M-cell grid
 ($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
 As shown in Figure~\ref{fig:ceiling}, increasing cores from
-16 to 64 returns only 1.08$\times$ speedup, while 128 ranks exhaust the node's memory. 
-Four nodes at 512 ranks plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
+16 to 64 returns only 1.08$\times$ speedup, while 128 processes exhaust the node's memory. 
+Four nodes at 512 processes plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
 At this scaling ceiling, accumulating converged turbulence statistics
 requires running hundreds of thousands of time steps. As a result, a single
 production simulation takes several hours to days to complete, making
