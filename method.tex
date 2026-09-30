@@ -5,32 +5,46 @@ data movement.
 \subsection{Porting Approach}
 \label{sec:method-approach}
 
-We ported LESGO using OpenACC directives with the NVHPC compiler and
-bound batched cuFFT spectral transforms to the same CUDA streams as the
-OpenACC kernels. We chose compiler directives over a low-level CUDA
-rewrite because LESGO is an extensive, physics-validated codebase
-actively maintained by user community extending the Fortran source.
-Directive-based offloading preserves a single source tree in which the
-CPU build remains reproducible and acts as our correctness reference.
-This approach also aligns with established porting practices in
-scientific computing, as demonstrated across atmospheric fluid
-models~\cite{esclapez2025dales,lapillonne2014,govett2017nim} and other
-production Fortran codebases~\cite{otero2019nek,caplan2019mas}.
+We port LESGO with OpenACC directives and the NVHPC compiler. We choose
+compiler directives over a low-level CUDA rewrite because LESGO is an
+extensive, physics-validated codebase that its user community actively
+extends in Fortran. Directive-based offloading preserves a single source
+tree, in which the CPU build remains reproducible and serves as our
+correctness reference. This choice also follows established practice in
+atmospheric models~\cite{esclapez2025dales,lapillonne2014,govett2017nim}
+and other production Fortran codebases~\cite{otero2019nek,caplan2019mas}.
 
-The computational pattern across the code is uniform. The solver state
-consists of dozens of persistent 3D Fortran arrays of $O(N^3)$ size,
-including velocity components, velocity gradients, subgrid-scale (SGS)
-stresses, and dealiased spectral scratch fields. Nearly every kernel
-sweeps these fields with a triple-nested loop. While this uniformity
-simplifies compute offloading, it heightens the penalty for poor data
-placement because any unnecessary host--device synchronization transfers
-$O(N^3)$ bytes.
+\vspace{0.08in}
+\textbf{Computation.} The structure of LESGO makes compute offloading
+straightforward. The solver state consists of dozens of persistent 3D
+Fortran arrays of $O(N^3)$ size, including velocity components, velocity
+gradients, SGS stresses, and dealiased spectral scratch fields. The
+kernels that update these arrays are loop nests over $x$, $y$, and $z$
+whose iterations are independent. We therefore parallelize each loop
+nest directly with an OpenACC \texttt{parallel loop} directive and use
+its \texttt{collapse} clause to map the independent loop levels onto GPU
+threads. We replace the FFTW transforms of the CPU build with
+batched cuFFT calls and bind them to the same CUDA stream as the OpenACC
+kernels, so that transforms and loops execute in order without host
+synchronization.
+
+\vspace{0.08in}
+\textbf{Data.} Offloading the loops decides where computation runs, but
+not where data lives. Because every solver array holds $O(N^3)$ values,
+each unnecessary host--device transfer moves an entire field.
+Directive-based ports commonly adopt one of three
+data strategies. (1)~\emph{Array mirroring} keeps a device copy of every
+host array and returns data to the host wherever host code consumes
+it. (2)~\emph{CUDA managed memory} lets the driver migrate pages between 
+host and device on demand. (3)~\emph{Fine-grained explicit residency}
+lets the developer decide, array by array and access by access, where
+each field resides and which part of it crosses the PCIe bus. The first
+two strategies require few code changes, so we begin with them.
 
 \subsection{Data-Movement Bottlenecks}
 \label{sec:method-problem}
 
-We now quantify the limitations of the two dominant data-placement
-strategies in directive-based ports.
+We first evaluate array mirroring and CUDA managed memory on LESGO.
 
 \begin{figure}[h]
   \centering
@@ -40,23 +54,24 @@ strategies in directive-based ports.
 \end{figure}
 
 % \vspace{0.08in}
-\textbf{Array Mirroring.} When the solver state fits comfortably in device memory, mirroring every
-host array on the device is an effective strategy, as all kernels can
-move to the GPU and data returns to the host only for diagnostics and
-checkpoints~\cite{esclapez2025dales,giorgetta2022}. LESGO, however,
-does not fit this mold for two reasons. First, its state comprises
-dozens of $O(N^3)$ fields plus $3/2$-padded spectral scratch, so
-duplicating arrays that no kernel reads wastes device memory and increases the number of GPUs a
-given grid requires. Second, several routines run slower on the GPU than
-on CPUs, and should therefore remain on the host. Mirroring
-consequently still requires PCIe transfers wherever these host-resident
-routines consume solver state. On our reference configuration ($256^3$
-grid with two wind turbines on 4 A100 GPUs), \texttt{Nsight Systems}
-profiling reveals that only 13\,ms of a 220\,ms time step is spent on
-GPU execution. PCIe transfers and host-side synchronization account for
-the remaining 207\,ms, leaving the GPU \textbf{94\% idle}
-(Fig.~\ref{fig:mirroring}). The dominant bottleneck is a full-field
-synchronization of twelve $O(N^3)$ arrays (420\,MB per step).
+\textbf{Array Mirroring.} Mirroring works well when the solver state
+fits comfortably in device memory and every kernel moves to the GPU, so
+that data returns to the host only for diagnostics and
+checkpoints~\cite{esclapez2025dales,giorgetta2022}. LESGO does not fit
+this mold for two reasons. First, its state comprises dozens of
+$O(N^3)$ fields plus $3/2$-padded spectral scratch, so duplicating
+arrays that no kernel reads wastes device memory and increases the
+number of GPUs a given grid requires. Second, several routines run
+slower on the GPU than on CPUs and should therefore remain on the host.
+Mirroring consequently still requires PCIe transfers wherever these
+host-resident routines consume solver state. On our reference
+configuration ($256^3$ grid with two wind turbines on 4 A100 GPUs),
+\texttt{Nsight Systems} profiling reveals that only 13\,ms of a 220\,ms
+time step is spent on GPU execution. PCIe transfers and host-side
+synchronization account for the remaining 207\,ms, leaving the GPU
+\textbf{94\% idle} (Fig.~\ref{fig:mirroring}). The dominant bottleneck
+is a full-field synchronization of twelve $O(N^3)$ arrays (420\,MB per
+step).
 
 % \begin{figure}[h]
 % \centering
@@ -66,21 +81,20 @@ synchronization of twelve $O(N^3)$ arrays (420\,MB per step).
 % \end{figure}
 
 \vspace{0.08in}
-\textbf{CUDA Managed Memory.} Managed memory minimizes initial porting
+\textbf{CUDA Managed Memory.} Managed memory requires the least porting
 effort and underpins Fortran standard-parallelism
-offloading~\cite{caplan2023dc}, making it an attractive default for
-directive-based ports. However, evaluating CUDA managed memory
-(\texttt{-gpu=mem:managed}) on the production benchmark
-(Section~\ref{sec:setup}) across 16 A100 GPUs yields limited acceleration. 
-Using \texttt{nsys} profiling, we found that
-extensive page faults and data migration overheads inherent to
-demand-paged unified memory~\cite{chien2019um} severely stall execution.
+offloading~\cite{caplan2023dc}. We build LESGO with
+\texttt{-gpu=mem:managed} and run the production benchmark
+(Section~\ref{sec:setup}) on 16 A100 GPUs. \texttt{nsys} profiling shows
+that page faults and on-demand data migration, which are inherent to
+demand-paged unified memory~\cite{chien2019um}, stall execution and
+yield limited acceleration.
 
 Both profiles point to the same root cause. After the compute kernels
 move to the GPU, certain routines still execute on the host and demand
-full-field data transfers to do so. Achieving high GPU efficiency therefore 
-requires fine-grained, structure-aware control over data residency and
-host--device transfer footprints.
+full-field data transfers. Achieving high GPU efficiency therefore
+requires the fine-grained control over data residency
+and host--device transfer footprints, which we develop next.
 
 \subsection{Consumer-Driven Explicit Residency}
 \label{sec:method-taxonomy}
@@ -157,7 +171,7 @@ instance in LESGO, the transfer cost that a naive port pays per step, and
 the treatment we apply.
 
 Working through the nine classes, we found that four data strategies
-suffice to resolve all of them: \emph{gate}, \emph{relocate},
+suffice to resolve them: \emph{gate}, \emph{relocate},
 \emph{slice}, and \emph{overlap}. Each exploits a different property of
 the coupling point, and we consider them in this order, moving to the
 next only when the previous one does not apply.

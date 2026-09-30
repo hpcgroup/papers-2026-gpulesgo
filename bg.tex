@@ -56,8 +56,8 @@ its coefficient dynamically~\cite{germano1991}, averages it along
 fluid-particle trajectories~\cite{meneveau1996}, and recovers scale
 dependence through a second test
 filter~\cite{porteagel2000,bouzeid2005}. Each
-coefficient update applies two spectral test filters to nine tensor
-fields (requiring batched 2-D FFTs across all vertical levels) and
+coefficient update applies two spectral test filters to 21 velocity
+and tensor fields (requiring batched 2-D FFTs across all vertical levels) and
 advects four accumulator fields along particle back-trajectories via
 trilinear interpolation. As the accuracy backbone of LESGO for
 heterogeneous ABL flows, this model relies on an irregular memory access

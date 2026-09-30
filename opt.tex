@@ -63,7 +63,7 @@ accelerated all other GPU solver stages by 15--18\%.
 
 The Lagrangian scale-dependent (LASD) subgrid-scale model
 (\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) demonstrates the
-same fragmentation. Each update filters nine 3D tensor fields at two 
+same fragmentation. Each update filters 21 3D velocity and tensor fields at two 
 test-filter scales: for every horizontal plane, it applies forward 2D FFTs, 
 damps selected wavenumber modes, and applies inverse 2D FFTs. 
 It also interpolates four accumulator fields to their upstream departure points
@@ -72,7 +72,8 @@ single-plane 2D FFTs per update, none large enough to saturate the
 device. We therefore batch transforms along the
 vertical dimension by promoting 2D scratch planes to 3D arrays, so that
 a single batched cuFFT call filters all vertical levels of a field at
-once. This consolidation collapses thousands of launches into a few dozen
+once. This consolidation collapses thousands of launches into a few 
+dozens of batched cuFFT calls
 while exposing enough parallel work per call to fully occupy the device.
 
 \subsection{Heterogeneous CPU--GPU Execution}

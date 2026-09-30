@@ -173,14 +173,27 @@ save(fig, "fig_sol")
 # Convection reads < 0.3 ms at every scale (its kernels drain inside the
 # pressure stage's first synchronization) and is folded into the caption.
 gpus = [16, 32, 64]
+# Derivatives and SGS enter as one combined value per scale. Their split
+# follows the separate "Derivatives" and "SGS & Stresses" timers of the
+# earlier Nz=400 runs (runs/scal_gpu{16,32,64}nz384_5432711{5,6,7}/run.log),
+# applied as a ratio to the combined value so every bar keeps its total.
+DS_COMBINED = [0.0607, 0.0330, 0.0191]
+DERIV_NZ400 = [0.02373509, 0.01079348, 0.006440276]
+SGS_NZ400 = [0.03306066, 0.01535980, 0.009332211]
+deriv = [c * d / (d + s) for c, d, s in zip(DS_COMBINED, DERIV_NZ400, SGS_NZ400)]
+sgs = [c - d for c, d in zip(DS_COMBINED, deriv)]
+# Projection has no dedicated treatment in the paper and is folded into Other.
+PROJECTION = [0.0053, 0.0036, 0.0028]
+OTHER = [0.0304, 0.0290, 0.0309]
 # Colors and hatches follow the PSSG lists in order, series i taking
 # PALETTE1[i] (the palette with black removed) and HATCHES[i].
 stages = [
-    ("Pressure",           [0.0570, 0.0235, 0.0172], VERM,   "white", "xxx"),
-    ("Derivatives + SGS",  [0.0607, 0.0330, 0.0191], BLUE,   "white", "//"),
-    ("Turbines",           [0.0082, 0.0041, 0.0020], GREEN,  "white", "|||"),
-    ("Projection",         [0.0053, 0.0036, 0.0028], PURPLE, "white", "OO"),
-    ("Other",              [0.0304, 0.0290, 0.0309], ROSE,   "black", "++"),
+    ("Pressure",     [0.0570, 0.0235, 0.0172], VERM,   "white", "xxx"),
+    ("Derivatives",  deriv,                    BLUE,   "white", "//"),
+    ("SGS",          sgs,                      GREEN,  "white", "|||"),
+    ("Turbines",     [0.0082, 0.0041, 0.0020], PURPLE, "white", "OO"),
+    ("Other",        [o + p for o, p in zip(OTHER, PROJECTION)],
+                                               ROSE,   "black", "++"),
 ]
 
 fig, ax = plt.subplots(figsize=ps.FIGSIZE)
