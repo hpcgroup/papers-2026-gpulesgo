@@ -49,8 +49,9 @@ optimize them on GPUs.
 \end{algorithmic}
 \end{algorithm}
 
-\stagelead{stgderiv}{Derivatives} (line 4). The RHS terms \fix{of which equation} need the
-velocity gradients. On each horizontal $x$-$y$ plane, LESGO computes the
+\stagelead{stgderiv}{Derivatives} (line 4). The convective and SGS terms
+of Eq.~\ref{eq:les} need the velocity gradients, which form the
+vorticity and the strain rate, respectively. On each horizontal $x$-$y$ plane, LESGO computes the
 horizontal derivatives spectrally with a forward 2D FFT, a
 multiplication by the wavenumbers, and an inverse 2D FFT. Vertical
 derivatives use second-order centered differences between adjacent
@@ -110,17 +111,19 @@ fields, including velocity components, modified pressure, and subgrid
 turbulence scalars, are stored as 3D Fortran arrays.
 
 Inter-process communication in this slab topology follows three main patterns.
-First, vertical finite-difference stencils require nearest-neighbor halo 
-exchanges \fix{how many processes?} of single horizontal planes between adjacent processes, and 
-\texttt{ProjectVelocity()} ends with such an exchange to refresh the ghost 
-planes for the next step. Second, 
-the pressure Poisson solve induces global coupling \fix{what does global coupling mean? all-to-all?} across all processes, 
-as each vertical tridiagonal system spans the entire domain height after 
-horizontal spectral transformation (Section~\ref{sec:opt-tridag}).
-Pressure is thus the only stage with fine-grained, globally coupled 
-communication. Third, small collective reductions \fix{over which sets of processes?} (\texttt{MPI\_Allreduce}) 
-serve the adaptive Courant--Friedrichs--Lewy (CFL) time-step control,
-runtime diagnostic logging, and per-turbine force aggregation. By avoiding 2D 
+First, vertical finite-difference stencils require nearest-neighbor halo
+exchanges, in which each process swaps a single horizontal plane with the
+processes directly below and above it. \texttt{ProjectVelocity()} ends with such an exchange
+to refresh the ghost planes for the next step. Second, the pressure
+Poisson solve chains all processes together. Each vertical tridiagonal
+system spans the entire domain height, so the distributed Thomas algorithm
+passes boundary coefficients from the bottom process up to the top one
+and back down (Section~\ref{sec:opt-tridag}).
+Pressure is thus the main stage with fine-grained, globally coupled
+communication. Third, small collective reductions (\texttt{MPI\_Allreduce})
+run over all processes for the adaptive Courant--Friedrichs--Lewy (CFL)
+time step control and runtime diagnostic logging, and over only the
+processes each turbine spans for per-turbine force aggregation. By avoiding 2D
 domain transposes, this 1D slab decomposition keeps computationally 
 intensive horizontal FFTs local to each process at the expense of a globally coupled 
 vertical solve.
