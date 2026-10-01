@@ -49,7 +49,7 @@ optimize them on GPUs.
 \end{algorithmic}
 \end{algorithm}
 
-\stagelead{stgderiv}{Derivatives} (line 4). The RHS terms need the
+\stagelead{stgderiv}{Derivatives} (line 4). The RHS terms \fix{of which equation} need the
 velocity gradients. On each horizontal $x$-$y$ plane, LESGO computes the
 horizontal derivatives spectrally with a forward 2D FFT, a
 multiplication by the wavenumbers, and an inverse 2D FFT. Vertical
@@ -59,7 +59,7 @@ over 3D arrays.
 
 \stagelead{stgsgs}{SGS} (lines 5--9). The SGS model represents the effect
 of turbulent motions smaller than the grid spacing. Every $c$-th step
-($c=5$ in production runs), \texttt{UpdateLASDCoefficient()} recomputes
+($c$=5 in production runs), \texttt{UpdateLASDCoefficient()} recomputes
 the LASD model coefficient (Section~\ref{sec:bg-physics}). It filters
 21 3D fields at two filter widths with 2D FFTs and interpolates four fields along
 fluid-particle trajectories, which makes it the most irregular and
@@ -111,14 +111,14 @@ turbulence scalars, are stored as 3D Fortran arrays.
 
 Inter-process communication in this slab topology follows three main patterns.
 First, vertical finite-difference stencils require nearest-neighbor halo 
-exchanges of single horizontal planes between adjacent processes, and 
+exchanges \fix{how many processes?} of single horizontal planes between adjacent processes, and 
 \texttt{ProjectVelocity()} ends with such an exchange to refresh the ghost 
 planes for the next step. Second, 
-the pressure Poisson solve induces global coupling across all processes, 
+the pressure Poisson solve induces global coupling \fix{what does global coupling mean? all-to-all?} across all processes, 
 as each vertical tridiagonal system spans the entire domain height after 
 horizontal spectral transformation (Section~\ref{sec:opt-tridag}).
 Pressure is thus the only stage with fine-grained, globally coupled 
-communication. Third, small collective reductions (\texttt{MPI\_Allreduce}) 
+communication. Third, small collective reductions \fix{over which sets of processes?} (\texttt{MPI\_Allreduce}) 
 serve the adaptive Courant--Friedrichs--Lewy (CFL) time-step control,
 runtime diagnostic logging, and per-turbine force aggregation. By avoiding 2D 
 domain transposes, this 1D slab decomposition keeps computationally 
@@ -140,10 +140,10 @@ wind-farm case, which simulates 60 turbines on a 604M-cell grid
 ($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
 As shown in Figure~\ref{fig:ceiling}, increasing cores from
-16 to 64 returns only 1.08$\times$ speedup, while 128 processes exhaust the node's memory. 
+16 to 64 results in only 1.08$\times$ speedup, while 128 processes exhaust the node's memory. 
 Four nodes at 512 processes plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
 At this scaling ceiling, accumulating converged turbulence statistics
-requires running hundreds of thousands of time steps. As a result, a single
+require running hundreds of thousands of time steps. As a result, a single
 production simulation takes several hours to days to complete, making
 large-scale wind-farm studies computationally impractical. This significant
 performance gap motivated our development of the GPU port.
