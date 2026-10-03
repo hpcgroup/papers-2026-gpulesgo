@@ -46,13 +46,6 @@ two strategies require few code changes, so we begin with them.
 
 We first evaluate array mirroring and CUDA managed memory on LESGO.
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{figs/fig_mirroring.pdf}
-  \caption{Time-step breakdown under array mirroring on the reference case ($256^3$ cells, 4 A100 GPUs). Host--device transfers and host-side synchronization leave the GPU 94\% idle.}
-  \label{fig:mirroring}
-\end{figure}
-
 % \vspace{0.08in}
 \textbf{Array Mirroring.} Mirroring works well when the solver state
 fits comfortably in device memory and every kernel moves to the GPU, so
@@ -66,12 +59,13 @@ slower on the GPU than on CPUs and should therefore remain on the host.
 Mirroring consequently still requires PCIe transfers wherever these
 host-resident routines consume solver state. On our reference
 configuration ($256^3$ grid with two wind turbines on 4 A100 GPUs),
-\texttt{Nsight Systems} profiling reveals that only 13\,ms of a 220\,ms
-time step is spent on GPU execution. PCIe transfers and host-side
-synchronization account for the remaining 207\,ms, leaving the GPU
-\textbf{94\% idle} (Fig.~\ref{fig:mirroring}). The dominant bottleneck
-is a full-field synchronization of twelve $O(N^3)$ arrays (420\,MB per
-step).
+\texttt{Nsight Systems} profiling shows that, of a 220\,ms time step,
+53\% goes to host computation and synchronization, 30\% to
+device-to-host transfers, and 12\% to host-to-device transfers. GPU
+execution accounts for only 6\% (13\,ms), which leaves the GPU
+\textbf{94\% idle}. Most of this traffic comes from a full-field
+synchronization of twelve $O(N^3)$ arrays (420\,MB per step), although
+the host routines read only about 5\,MB of these arrays.
 
 % \begin{figure}[h]
 % \centering

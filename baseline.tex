@@ -103,17 +103,26 @@ from the velocity to make the flow divergence-free.
 
 LESGO is implemented in Fortran~90 and parallelized with MPI using a 1D slab 
 decomposition along the vertical ($z$) axis. Each MPI process owns a contiguous 
-block of horizontal $z$-planes spanning the full horizontal domain ($x$-$y$). 
+block of horizontal $z$-planes spanning the full horizontal domain ($x$-$y$)
+(Fig.~\ref{fig:lesgo-decomposition}a). 
 This topology allows 2D horizontal FFTs to execute entirely within each process,
 completely avoiding expensive 2D domain transposes (\texttt{MPI\_Alltoallv})
 required by 2D pencil decompositions~\cite{romero2022}. Primary physical 
 fields, including velocity components, modified pressure, and subgrid 
 turbulence scalars, are stored as 3D Fortran arrays.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\columnwidth]{figs/lesgo_domain_communication.pdf}
+    \caption{LESGO's decomposition. (a) The $N_x \times N_y \times N_z$ grid is split along $z$ into $n$ slabs of $N_z/n$ contiguous $x$-$y$ planes. (b) Vertical finite-difference stencils copy each slab's boundary plane into its neighbor's ghost plane.}
+    \label{fig:lesgo-decomposition}
+\end{figure}
+
+
 Inter-process communication in this slab topology follows three main patterns.
 First, vertical finite-difference stencils require nearest-neighbor halo
 exchanges, in which each process swaps a single horizontal plane with the
-processes directly below and above it. \texttt{ProjectVelocity()} ends with such an exchange
+processes directly below and above it (Fig.~\ref{fig:lesgo-decomposition}b). \texttt{ProjectVelocity()} ends with such an exchange
 to refresh the ghost planes for the next step. Second, the pressure
 Poisson solve chains all processes together. Each vertical tridiagonal
 system spans the entire domain height, so the distributed Thomas algorithm

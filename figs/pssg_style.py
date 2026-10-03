@@ -8,8 +8,8 @@ sky).
 
 Two geometries:
   apply(env=True)  -- the PlotEnvironment defaults verbatim: 5 x 3 in
-                      figure (FIGSIZE), matplotlib default font sizes
-                      (10 pt base, 12 pt title), 2 pt lines, 8 pt markers.
+                      figure (FIGSIZE), 12 pt base font (titles
+                      included), 2 pt lines, 8 pt markers.
                       LaTeX scales the figure to the column (x0.7).
                       Used by the measured-data plots.
   apply()          -- compact variant for the hand-drawn schematics:
@@ -61,13 +61,15 @@ def apply(env=False):
     if env:
         # Equivalent of `with PlotEnvironment(font_path=...)`: seaborn's
         # context only sets the eight keys below on top of matplotlib's
-        # defaults, so font sizes are matplotlib's (10 pt, title 12 pt).
+        # defaults. The paper raises the base from 10 pt to 12 pt and sets
+        # titles to the same size, so all text reads at ~8.4 pt once LaTeX
+        # scales the 5 x 3 in figure to the column.
         plt.rcParams.update({
             "font.family": name,
             "mathtext.fontset": "stixsans",
-            "font.size": 10,
+            "font.size": 12,
             "axes.labelsize": "medium",
-            "axes.titlesize": "large",
+            "axes.titlesize": "medium",
             "xtick.labelsize": "medium",
             "ytick.labelsize": "medium",
             "legend.fontsize": "medium",

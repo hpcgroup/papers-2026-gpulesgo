@@ -42,7 +42,10 @@ def save(fig, name):
 cores = [16, 32, 64, 256, 512]
 tstep = [14.376, 12.577, 13.335, 9.285, 6.479]
 nodes = [1, 1, 1, 2, 4]
-oom_core, oom_t = 128, 13.335
+# The 128-process run exceeds node memory. Its cross sits on the CPU line,
+# which is straight in log-log space between 64 and 256 processes.
+oom_core = 128
+oom_t = (tstep[2] * tstep[3]) ** 0.5
 GPU_T = 0.1619
 
 fig, ax = plt.subplots(figsize=ps.FIGSIZE)
@@ -58,38 +61,38 @@ ax.plot(cores, tstep, ps.MARKERS[0], color=VERM, mew=0, ls="none",
 ax.plot([oom_core], [oom_t], "x", ms=10, mew=2, color=VERM, ls="none",
         zorder=4)
 ax.annotate("out of memory", xy=(oom_core, oom_t), xytext=(0, 9),
-            textcoords="offset points", ha="center", fontsize=9,
+            textcoords="offset points", ha="center", fontsize=11,
             color=VERM)
 
 # GPU: single measured point (16 x A100 on 4 nodes), no line
 ax.plot([512], [GPU_T], ps.MARKERS[1], color=BLUE, mew=0, ls="none",
         zorder=4, label="GPU", clip_on=False)
-ax.annotate("4 GPU nodes: 16$\\times$A100: 0.162 s", xy=(512, GPU_T), xytext=(-9, 0),
-            textcoords="offset points", color=BLUE, fontsize=10,
+ax.annotate("4 GPU nodes (16 A100 GPUs): 0.162 s", xy=(512, GPU_T), xytext=(-9, 0),
+            textcoords="offset points", color=BLUE, fontsize=12,
             va="center", ha="right")
 
 # annotations: best CPU point and the CPU-to-GPU gap
 # ax.annotate("best: 6.48 s @ 512", xy=(512, 6.479), xytext=(120, 3.2),
 #             fontsize=7, color="#333333",
 #             arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.6))
-ax.annotate("4 CPU nodes: 6.48 s", xy=(512, 6.479), xytext=(120, 3.2),
-            fontsize=10, color="#333333",
-            arrowprops=dict(arrowstyle="-", color=GRAY, lw=0.8))
-ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=10, color="#333333",
+ax.annotate("4 CPU nodes: 6.48 s", xy=(512, 6.479), xytext=(-6, -11),
+            textcoords="offset points", fontsize=12, color="#333333",
+            ha="right", va="top")
+ax.annotate("40$\\times$", xy=(430, 0.95), fontsize=12, color="#333333",
             ha="right")
-ax.annotate("", xy=(512, 0.26), xytext=(512, 3.4),
+ax.annotate("", xy=(512, 0.26), xytext=(512, 5.0),
             arrowprops=dict(arrowstyle="->", color=GRAY, lw=1.0))
 
 ax.set_xticks([16, 32, 64, 128, 256, 512])
 ax.set_xticklabels(["16", "32", "64", "128", "256", "512"])
 ax.set_xticks([], minor=True)
-ax.set_yticks([0.2, 0.5, 1, 2, 5, 10, 20])
-ax.set_yticklabels(["0.2", "0.5", "1", "2", "5", "10", "20"])
+ax.set_yticks([0.1, 0.2, 0.5, 1, 2, 5, 10, 20])
+ax.set_yticklabels(["0.1", "0.2", "0.5", "1", "2", "5", "10", "20"])
 ax.set_xlim(15, 512)
-ax.set_ylim(0.11, 20)
-ax.set_xlabel("number of processes")
-ax.set_ylabel("time per step (s)")
-ax.set_title("CPU strong scaling of the production case")
+ax.set_ylim(0.1, 20)
+ax.set_xlabel("Number of processes")
+ax.set_ylabel("Time per step (s)")
+ax.set_title("Strong scaling of the wf60 configuration on CPU nodes")
 ax.grid(True, which="major", axis="y")
 ax.legend(loc="lower left", bbox_to_anchor=(0.0, 0.10),
           handletextpad=0.4, borderaxespad=0.2)
@@ -117,10 +120,10 @@ for y, (name, before, after) in zip(ys, comp):
     ax.plot(before, y, "o", color=VERM, mew=0, zorder=2)
     ax.plot(after, y, "o", color=BLUE, mew=0, zorder=3)
     ax.annotate(f"{before:g}", xy=(before, y), xytext=(0, 7),
-                textcoords="offset points", ha="center", fontsize=9,
+                textcoords="offset points", ha="center", fontsize=11,
                 color=VERM)
     ax.annotate(f"{after:g}", xy=(after, y), xytext=(0, 7),
-                textcoords="offset points", ha="center", fontsize=9,
+                textcoords="offset points", ha="center", fontsize=11,
                 color=BLUE)
 ax.set_xscale("log")
 ax.set_yticks(ys)
@@ -143,7 +146,7 @@ for x, v, c, h in ((0, 23, VERM, ps.HATCHES[0]), (1, 93, BLUE, ps.HATCHES[1])):
     axb.bar([x], [v], width=0.62, color=c, hatch=h, edgecolor="black",
             linewidth=0, zorder=3)
     axb.annotate(f"{v}%", xy=(x, v), xytext=(0, 3),
-                 textcoords="offset points", ha="center", fontsize=10)
+                 textcoords="offset points", ha="center", fontsize=12)
 axb.set_xticks([0, 1])
 axb.set_xticklabels(["before", "after"])
 axb.set_ylim(0, 105)
@@ -184,24 +187,21 @@ for i, (name, gs, ts, col) in enumerate(strong):
 # over the fastest CPU configuration (4 nodes, 512 processes).
 cpu_best = min(tstep)
 _, gs604, ts604, _ = strong[2]
+# The caption states that the labels are speedups over the best CPU run.
 for g, t in zip(gs604, ts604):
-    lab = f"{cpu_best / t:.0f}$\\times$"
-    if g == gs604[0]:
-        lab += "\nvs. best CPU"
-    # the 16-GPU label sits left-aligned and lower so it clears the
-    # steep 16->32 segment
-    first = g == gs604[0]
-    a1.annotate(lab, xy=(g, t), xytext=(-10, -20) if first else (0, -9),
-                textcoords="offset points", ha="left" if first else "center",
-                va="top", fontsize=11, color=GREEN, linespacing=1.1)
+    # the 16-GPU label drops a little further to clear the steep segment
+    a1.annotate(f"{cpu_best / t:.0f}$\\times$", xy=(g, t),
+                xytext=(0, -14) if g == gs604[0] else (0, -9),
+                textcoords="offset points", ha="center", va="top",
+                fontsize=12, color=GREEN)
 a1.set_xticks([16, 32, 64, 128])
 a1.set_xticklabels(["16", "32", "64", "128"])
 a1.set_ylim(0.05, 0.25)
 a1.set_yticks([0.05, 0.10, 0.15, 0.20, 0.25])
 a1.set_yticklabels(["0.05", "0.10", "0.15", "0.20", "0.25"])
 a1.minorticks_off()
-a1.set_xlabel("GPUs")
-a1.set_ylabel("s per step")
+a1.set_xlabel("Number of GPUs")
+a1.set_ylabel("Time per step (s)")
 a1.set_title("GPU strong scaling at three problem sizes")
 a1.legend(loc="upper right")
 a1.grid(True, axis="y")
@@ -212,15 +212,16 @@ save(fig, "fig_scaling")
 fig, a2 = plt.subplots(figsize=ps.FIGSIZE)
 a2.set_xscale("log", base=2)
 for i, (name, gs, ts, col) in enumerate(weak):
-    a2.plot(gs, ts, marker=ps.MARKERS[i], ls=ps.dashes(i),
+    a2.plot(gs, [t / 1e3 for t in ts], marker=ps.MARKERS[i], ls=ps.dashes(i),
             color=col, mew=0, label=name)
 a2.set_xticks([4, 8, 16, 32, 64])
 a2.set_xticklabels(["4", "8", "16", "32", "64"])
 a2.minorticks_off()
-a2.set_ylim(0, 200)
-a2.set_yticks([0, 50, 100, 150, 200])
-a2.set_xlabel("GPUs")
-a2.set_ylabel("ms per step")
+a2.set_ylim(0, 0.2)
+a2.set_yticks([0, 0.05, 0.10, 0.15, 0.20])
+a2.set_yticklabels(["0", "0.05", "0.10", "0.15", "0.20"])
+a2.set_xlabel("Number of GPUs")
+a2.set_ylabel("Time per step (s)")
 a2.set_title("GPU weak scaling at three per-GPU loads")
 a2.legend(loc="center left")
 a2.grid(True, axis="y")

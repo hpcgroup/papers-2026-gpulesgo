@@ -9,8 +9,6 @@ import pssg_style as ps
 from pssg_style import VERM, BLUE, GREEN, GRAY, LGRAY
 
 ps.apply(env=True)
-# a notch above the PSSG defaults: this plot carries per-point labels
-plt.rcParams.update({"font.size": 11.5, "lines.markersize": 10})
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,9 +37,9 @@ xs = np.logspace(-1.5, 2.0, 64)
 roof = np.minimum(BW_TBS * xs, PEAK_TF)
 ax.plot(xs, roof, color=GRAY, zorder=2)
 ax.annotate("2.04 TB/s HBM", xy=(0.115, 0.115 * BW_TBS * 1.35), color=GRAY,
-            fontsize=10.5, rotation=35, ha="left", va="bottom")
+            fontsize=12, rotation=35, ha="left", va="bottom")
 ax.annotate("9.7 TF/s FP64", xy=(11, PEAK_TF * 1.18), color=GRAY,
-            fontsize=10.5, ha="left", va="bottom")
+            fontsize=12, ha="left", va="bottom")
 ax.axvline(RIDGE, ls=ps.dashes(2), lw=1.0, color=LGRAY, zorder=1)
 
 cols = {0: BLUE, 1: VERM, 2: GREEN}
@@ -54,24 +52,24 @@ for name, ai, tf, share, cls in fams:
 lab = {
     "convection":       (0.074, 0.13, (7, -16), "left"),
     "SGS":              (0.163, 0.26, (8, -5), "left"),
-    "pressure":         (0.063, 0.11, (-12, 13), "left"),
+    "pressure":         (0.063, 0.11, (-26, 22), "left"),
     "regular\\_fft":    (1.471, 1.73, (-8, -16), "left"),
     "vector\\_fft":     (1.886, 3.13, (8, 5), "left"),
     "ATM force proj.":  (33.57, 2.70, (0, 12), "center"),
-    "ATM sampling":     (4.805, 0.40, (0, 12), "center"),
+    "ATM sampling":     (4.805, 0.40, (9, -4), "left"),
 }
 for name, (x, y, off, ha) in lab.items():
     ax.annotate(name.replace("\\_", "_"), xy=(x, y), xytext=off, ha=ha,
-                textcoords="offset points", fontsize=10.5, color="#333333")
+                textcoords="offset points", fontsize=12, color="#333333")
 
 handles = [plt.Line2D([], [], ls="none", marker=mks[c], color=cols[c], ms=MS**0.5,
                       label=t) for c, t in
            ((0, "hand-written"), (1, "cuFFT"), (2, "actuator line"))]
-ax.legend(handles=handles, loc="lower right", handletextpad=0.3,
+ax.legend(handles=handles, loc="upper left", handletextpad=0.3,
           borderaxespad=0.3)
 ax.set_xlim(0.03, 110)
 ax.set_ylim(0.05, 22)
-ax.set_xlabel("arithmetic intensity (FLOP/byte)")
+ax.set_xlabel("Arithmetic intensity (FLOP/byte)")
 ax.set_ylabel("TFLOP/s")
 ax.set_title("Roofline of the production step on A100")
 ax.grid(True, which="major", axis="both")

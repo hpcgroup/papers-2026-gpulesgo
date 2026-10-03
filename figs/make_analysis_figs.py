@@ -143,8 +143,8 @@ else:
 fig, ax = plt.subplots(figsize=ps.FIGSIZE)
 ax.fill_between([0, 100], [0, 100], [100, 100], color="#f0f0f0", zorder=0)
 ax.plot([0, 100], [0, 100], ls=ps.dashes(2), lw=1.0, color=LGRAY, zorder=1)
-ax.annotate("memory-bound", xy=(6, 91), fontsize=9, color=GRAY, ha="left")
-ax.annotate("compute-bound", xy=(97, 30), fontsize=9, color=GRAY, ha="right")
+ax.annotate("memory-bound", xy=(6, 91), fontsize=11, color=GRAY, ha="left")
+ax.annotate("compute-bound", xy=(97, 30), fontsize=11, color=GRAY, ha="right")
 
 for pts, color, z in ((acc_pts, VERM, 3), (fft_pts, BLUE, 4)):
     ax.scatter([p[0] for p in pts], [p[1] for p in pts],
@@ -206,20 +206,20 @@ for name, vals, color, tcol, hatch in stages:
     for i, (b, v) in enumerate(zip(bottom, ms)):
         if v > 7.5:   # direct-label the large segments
             ax.annotate(f"{v:.0f}", xy=(i, b + v / 2), ha="center",
-                        va="center", fontsize=9, color=tcol, zorder=4)
+                        va="center", fontsize=11, color=tcol, zorder=4)
     bottom = [b + v for b, v in zip(bottom, ms)]
 
 for i, b in enumerate(bottom):
     ax.annotate(f"{b:.0f} ms", xy=(i, b), xytext=(0, 4),
-                textcoords="offset points", ha="center", fontsize=10)
+                textcoords="offset points", ha="center", fontsize=12)
 
 ax.set_xticks(list(x))
 ax.set_xticklabels([str(g) for g in gpus])
 ax.set_xlim(-0.55, 2.6)
 ax.set_ylim(0, 180)
 ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
-ax.set_xlabel("GPUs")
-ax.set_ylabel("stage time per step (ms)")
+ax.set_xlabel("Number of GPUs")
+ax.set_ylabel("Stage time per step (ms)")
 ax.set_title("Runtime decomposition on the 604M-cell case")
 ax.grid(True, axis="y")
 handles, labels = ax.get_legend_handles_labels()
