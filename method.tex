@@ -50,14 +50,16 @@ We first evaluate array mirroring and CUDA managed memory on LESGO.
 \textbf{Array Mirroring.} Mirroring works well when the solver state
 fits comfortably in device memory and every kernel moves to the GPU, so
 that data returns to the host only for diagnostics and
-checkpoints~\cite{esclapez2025dales,giorgetta2022}. LESGO does not fit
+checkpoints~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. LESGO does not fit
 this mold for two reasons. First, its state comprises dozens of
 $O(N^3)$ fields plus $3/2$-padded spectral scratch, so duplicating
 arrays that no kernel reads wastes device memory and increases the
-number of GPUs a given grid requires. Second, several routines run
-slower on the GPU than on CPUs and should therefore remain on the host.
-Mirroring consequently still requires PCIe transfers wherever these
-host-resident routines consume solver state. On our reference
+number of GPUs a given grid requires. Second, several routines, such as
+the serial pressure zero-wavenumber recurrence and the airfoil table
+lookups, run slower on the GPU than on CPUs and should therefore remain
+on the host. Mirroring consequently still requires PCIe transfers at
+every step wherever these host-resident routines consume solver state.
+On our reference
 configuration ($256^3$ grid with two wind turbines on 4 A100 GPUs),
 \texttt{Nsight Systems} profiling shows that, of a 220\,ms time step,
 53\% goes to host computation and synchronization, 30\% to
@@ -143,7 +145,7 @@ Host physics & tabulated airfoil polar lookups & serialized 28\,ms
 
 Our port keeps device memory as the primary copy of
 every solver field throughout execution, and host routines touch
-solver state only at \emph{coupling points}. 
+solver state only at \emph{coupling points}.
 The substance of our strategy is how each coupling point is
 treated. We size its transfer by the spatial footprint the host
 routine actually accesses. 

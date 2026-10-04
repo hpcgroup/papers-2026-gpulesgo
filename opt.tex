@@ -54,12 +54,11 @@ turbine, accumulating over 1,000 \texttt{MPI\_Allreduce} operations per
 process every step. We therefore batch the entire farm into unified device
 operations. Blade-point tables for all turbines reside permanently in
 device memory. We use a single sampling kernel and a single projection kernel
-process all concatenated turbine points, and all reduction quantities
+to process all concatenated turbine points, and all reduction quantities
 travel in one packed \texttt{MPI\_Allreduce}. Together, these changes
 cut per-step kernel launch and collective call counts by an order of
-magnitude. The same restructuring also removed repeated device
-allocations from the time loop, which
-accelerated all other GPU solver stages by 15--18\%.
+magnitude and remove all per-turbine device allocations from the time
+loop.
 
 The Lagrangian scale-dependent (LASD) subgrid-scale model
 (\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) demonstrates the
@@ -73,7 +72,7 @@ device. We therefore batch transforms along the
 vertical dimension by promoting 2D scratch planes to 3D arrays, so that
 a single batched cuFFT call filters all vertical levels of a field at
 once. This consolidation collapses thousands of launches into a few 
-dozens of batched cuFFT calls
+dozen batched cuFFT calls
 while exposing enough parallel work per call to fully occupy the device.
 
 \subsection{Heterogeneous CPU--GPU Execution}
@@ -94,7 +93,7 @@ The production case involves only 10,800 actuator points, far too few
 to saturate a GPU. Moreover, each point traverses a data-dependent path
 through the airfoil polar lookup, causing warps to serialize.
 Kernel-launch and data-transfer overheads therefore exceed the useful
-computation. We accordingly keep this routine. 
+computation. We accordingly keep this routine on the host. 
 This decision, however, introduces a new challenge. Host execution
 costs $\sim$28\,ms per step, and running it synchronously would leave
 the GPU idle at every time step.

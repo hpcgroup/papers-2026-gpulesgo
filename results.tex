@@ -19,7 +19,7 @@ Configuration & s/step & vs.\ CPU \\
 CPU, fastest configuration (4 nodes)  & 6.48 & 1.0$\times$ \\
 Explicit residency (\S\ref{sec:method-taxonomy})
                                         & 1.320 & 4.9$\times$ \\
-\;+ actuator-line model on device (\S\ref{sec:opt-batch})
+\;+ actuator-line model on device (\S\ref{sec:method-taxonomy})
                                        & 0.574 & 11.3$\times$ \\
 \;+ chunk pipelining (\S\ref{sec:opt-tridag})
                                        & 0.303 & 21.4$\times$ \\
@@ -41,7 +41,7 @@ its respective section. First, our fine-grained data management
 strategy enables a per-step runtime of 1.32\,s, already $4.9\times$ 
 faster than the fastest CPU configuration. 
 Then, relocating the actuator-line coupling onto the device
-(\S\ref{sec:opt-batch}) removes the last recurring full-field PCIe
+(\S\ref{sec:method-taxonomy}) removes the last recurring full-field PCIe
 crossings and shortens the step by $2.3\times$. Pipelining the
 distributed tridiagonal solve (\S\ref{sec:opt-tridag}) converts the
 serialized process chain of the pressure solver into overlapped chunk

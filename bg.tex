@@ -38,10 +38,16 @@ Consequently, FFT-based differentiation, dealiased products, and the spectral
 Poisson solve render the computational profile heavily FFT-dominated, 
 in contrast to finite-difference atmospheric codes where FFTs are confined to 
 the pressure solve~\cite{esclapez2025dales,vanheerwaarden2017}.
-Prior GPU accelerations for such FFT-heavy solvers rely on CUDA Fortran,
-including ports of finite-difference codes such as CaNS~\cite{costa2018,costa2021}  
-and AFiD~\cite{zhu2018afid}, or custom asynchronous redesigns of 
+Early GPU ports of such FFT-heavy solvers were written in CUDA Fortran,
+including the finite-difference codes CaNS~\cite{costa2021} and
+AFiD~\cite{zhu2018afid}, or custom asynchronous redesigns of 
 pseudo-spectral codes~\cite{ravikumar2019}.
+CaNS has since moved to OpenACC, with the
+cuDecomp library handling multi-GPU transposes and halo
+exchanges~\cite{romero2022}, and later added a pencil-distributed parallel
+tridiagonal solver for the pressure Poisson equation~\cite{diezsanhueza2025}.
+CaLES~\cite{xiao2025cales} extends the OpenACC version of CaNS to LES of
+wall-bounded flows. 
 
 \subsection{Dynamic SGS and Actuator-Line Turbine Models}
 \label{sec:bg-physics}
@@ -81,7 +87,7 @@ focused on the ExaWind stack~\cite{sharma2024exawind,mullowney2021,kuhn2025amrwi
 which comprises second-order finite-volume codes tailored for 
 geometry-resolved engineering simulations of finite wind farms. 
 In contrast, LESGO addresses a distinct physical regime. Its 
-pseudo-spectral discretization introduces zero numerical dissipation, 
+pseudo-spectral discretization introduces negligible numerical dissipation, 
 enabling turbulence spectra, wake-recovery entrainment, and 
 farm-boundary-layer interactions to be resolved without scheme-induced 
 contamination. Furthermore, its horizontally periodic formulation 

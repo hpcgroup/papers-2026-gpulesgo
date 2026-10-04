@@ -23,10 +23,10 @@ yang2015iwm,bretheim2015}.
 Figure~\ref{fig:wf60-velocity} illustrates the interacting turbulent wakes in
 the 60-turbine JHTDB-wind configuration, which serves as our production
 benchmark. LESGO's numerical formulation combines Fourier
-colocation in the horizontal directions, a scale-dependent Lagrangian dynamic
+collocation in the horizontal directions, a scale-dependent Lagrangian dynamic
 subgrid-scale (SGS) model~\cite{bouzeid2005}, and actuator-line turbine
-coupling~\cite{sorensen2002}. This formulation carries little numerical
-dissipation and delivers high accuracy per grid point. Its CPU implementation,
+coupling~\cite{sorensen2002}. The pseudo-spectral discretization adds negligible
+numerical dissipation and delivers high accuracy per grid point. Its CPU implementation,
 however, saturates node memory bandwidth even at tens of cores and exhausts its
 slab decomposition at modest process counts (Section~\ref{sec:bg-impl}), severely
 constraining production-scale runs.  Because the scientific fidelity of
@@ -56,11 +56,13 @@ device-resident state. They vary widely in how much of the field they
 touch and how often, so no single blanket data-placement policy fits
 them all. The two data strategies common to directive-based ports both
 encounter severe limitations here. (1)~Array mirroring keeps a device
-copy of host array, so kernels read device-resident state and data
-returns to the host only where host code still consumes
-it~\cite{esclapez2025dales,giorgetta2022}. This determines where the data 
-lives but leaves open how to serve the remaining host consumers efficiently, 
-since each full-field transfer back to the host stalls the GPU. Mirroring every
+copy of host array. Fully resident
+ports~\cite{esclapez2025dales,giorgetta2022,xiao2025cales} run all
+physics on the GPU, so full fields return to the host mainly for output.
+However, in LESGO we find that some operations suit the CPU better, such as the 
+serial pressure recurrence and the airfoil table lookups, and they read solver
+state every step. Mirroring leaves open how to serve these consumers,
+and each full-field transfer stalls the GPU. Mirroring every
 array also consumes device memory, so that LESGO needs more GPUs for the
 same problem size.
 (2)~Delegating placement to CUDA managed memory lets the driver migrate
