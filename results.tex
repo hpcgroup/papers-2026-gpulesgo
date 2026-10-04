@@ -7,9 +7,9 @@ scaling behavior.
 
 \begin{table}[h]
 \centering
-\caption{Cumulative speedup of optimizations on 4 nodes, 16 A100 GPUs for the
+\caption{Cumulative speedup of optimizations on 4 GPU nodes, 16 A100 GPUs for the
 production benchmark (604M cells, 60 turbines) against the fastest
-CPU baseline (4 nodes, 512 processes, Fig.~\ref{fig:ceiling}).}
+CPU baseline (4 CPU nodes Fig.~\ref{fig:ceiling}).}
 \label{tab:progression}
 \footnotesize
 \begin{tabular}{@{}lrr@{}}
@@ -104,16 +104,13 @@ configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
 \end{figure}
 
-Figure~\ref{fig:scaling} presents strong scaling performance for the
-60-turbine wind farm across vertical grid resolutions of 512, 768, and
-1152 levels. The solver maintains 87\% parallel efficiency from 16 to
-32 GPUs on the 604M-cell grid, 90\% on the 906M-cell grid, and 87\%
-from 32 to 64 GPUs on the 1.36B-cell grid, reducing step time from
-0.188\,s to 0.108\,s. On this largest grid, scaling extends to 128 GPUs
-at 0.084\,s per time
-step, achieving a throughput of 16.2 billion cell updates per second.
-On the production 604M-cell grid, 64 GPUs bring the step to 0.072\,s,
-a 90$\times$ speedup over the fastest CPU configuration
+Figure~\ref{fig:scaling} presents strong scaling for the 60-turbine wind
+farm across vertical grid resolutions of 512, 768, and 1152 levels. All
+three problem sizes show robust strong scaling, and the 1.36B-cell
+grid scales out to 128 GPUs. On the production 604M-cell grid, doubling
+from 16 to 32 GPUs speeds up each step by 1.7$\times$, and 64 GPUs raise
+the gain to 2.2$\times$ at 0.072\,s per step. At this scale, the GPU
+solver runs 90$\times$ faster than the fastest CPU configuration
 (Table~\ref{tab:progression}).
 
 \begin{figure}[h]

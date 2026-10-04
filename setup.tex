@@ -4,6 +4,18 @@ with NVHPC 25.5, CUDA 12.9, cuFFT 11.4,
 and CUDA-aware Cray MPICH 9.1.0. CPU baselines run on the 
 Perlmutter's CPU nodes with two 64-core AMD EPYC 7763 (Milan) CPUs each.
 
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
+    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
+    1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
+    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
+    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
+    \label{fig:lesgo-cpu-gpu-field}
+\end{figure*}
+
+
 \textbf{Cases.} The production case (``wf60'') is a 60-turbine wind
 farm of NREL 5-MW reference turbines~\cite{jonkman2009} in a
 $10\times6$ array with $7D$ streamwise and $5D$ spanwise spacing
@@ -59,19 +71,9 @@ at roundoff scale, and the hub-height centerline profiles
 (Fig.~\ref{fig:lesgo-cpu-gpu}) are indistinguishable, confirming that the
 two backends are consistent.
 
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
-    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
-    1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
-    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
-    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
-    \label{fig:lesgo-cpu-gpu-field}
-\end{figure*}
-
 \begin{figure}[h]
     \centering
-    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
+    \includegraphics[width=1\columnwidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
     \caption{Hub-height centerline profiles of $u/U_\infty$ from the CPU
     and GPU runs of Fig.~\ref{fig:lesgo-cpu-gpu-field}. The two curves
     coincide.}
