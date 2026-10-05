@@ -7,10 +7,12 @@ production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 \label{sec:opt-tridag}
 
 \begin{figure}[h]
+    \vspace{-0.05in}
 \centering
 \includegraphics[width=\linewidth]{figs/fig4_lesgo_pipeline.pdf}
 \caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves processes idle. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
 \label{fig:tridag}
+    \vspace{-0.05in}
 \end{figure}
 
 In the spectral Poisson solve (\texttt{PoissonTridiag()} in
@@ -34,8 +36,8 @@ initiates back substitution for chunk $m$ as soon as its forward pass finishes,
 overlapping the backward wave of early chunks with the forward sweep of later ones. 
 Unlike reduced-system libraries that alter the elimination
 arithmetic~\cite{laszlo2016,kim2021pascal}, our pipelined approach
-leaves the inner Thomas loops untouched, ensuring results equivalence
-with the sequential baseline.
+leaves the inner Thomas loops untouched, ensuring results match the
+sequential baseline.
 
 \subsection{Batching Many Small Work Items}
 \label{sec:opt-batch}
@@ -57,8 +59,7 @@ device memory. We use a single sampling kernel and a single projection kernel
 to process all concatenated turbine points, and all reduction quantities
 travel in one packed \texttt{MPI\_Allreduce}. Together, these changes
 cut per-step kernel launch and collective call counts by an order of
-magnitude and remove all per-turbine device allocations from the time
-loop.
+magnitude and eliminate per-turbine device allocations.
 
 The Lagrangian scale-dependent (LASD) subgrid-scale model
 (\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) demonstrates the
@@ -71,19 +72,12 @@ single-plane 2D FFTs per update, none large enough to saturate the
 device. We therefore batch transforms along the
 vertical dimension by promoting 2D scratch planes to 3D arrays, so that
 a single batched cuFFT call filters all vertical levels of a field at
-once. This consolidation collapses thousands of launches into a few 
-dozen batched cuFFT calls
-while exposing enough parallel work per call to fully occupy the device.
+once. This batching collapses thousands of launches into a few dozen
+batched cuFFT calls while exposing enough parallel work per call to 
+fully occupy the device.
 
 \subsection{Heterogeneous CPU--GPU Execution}
 \label{sec:opt-overlap}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=\linewidth]{figs/fig_overlap.pdf}
-\caption{Heterogeneous overlap of the actuator-line model. }
-\label{fig:overlap}
-\end{figure}
 
 We initially ported every computational stage to the GPU, but found that
 blade-force evaluation in the actuator-line model
@@ -100,6 +94,13 @@ the GPU idle at every time step.
 We address this by overlapping host computation with concurrent device
 work.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figs/fig_overlap.pdf}
+    \caption{Heterogeneous overlap of the actuator-line model. }
+    \label{fig:overlap}
+\end{figure}
+
 Such overlap is feasible because blade-force evaluation only reads
 velocities produced at the start of the time step, and its outputs are
 not consumed until the force-projection stage later in the step. We
@@ -108,7 +109,7 @@ decoupled phases around the convection stage
 (Fig.~\ref{fig:overlap}). Phase~1 samples blade-point velocities on the
 GPU and transfers the compact data packet to the host, returning control
 immediately without flushing the device queue. The GPU then proceeds
-with convection while the CPU evaluates aerodynamic forces concurrently.
+with convection while the CPU evaluates aerodynamic forces.
 Phase~2 uploads the calculated forces and projects them onto the
 Eulerian grid. 
 This overlap removes host computation from the critical path, saving

@@ -33,6 +33,7 @@ Explicit residency (\S\ref{sec:method-taxonomy})
                                         & 0.206 & \textbf{39.7$\times$} \\
 \bottomrule
 \end{tabular}
+\vspace{-0.1in}
 \end{table}
 
 Table~\ref{tab:progression} summarizes solver progression on the
@@ -102,6 +103,7 @@ reference setup.
 sizes. Labels on the 604M curve give the speedup over the fastest CPU
 configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
+\vspace{-0.05in}
 \end{figure}
 
 Figure~\ref{fig:scaling} presents strong scaling for the 60-turbine wind
@@ -120,6 +122,7 @@ solver runs 90$\times$ faster than the fastest CPU configuration
     \texttt{Other} includes the velocity projection and the routines elided
     in Algorithm~\ref{alg:step}.}
     \label{fig:stagescale}
+    \vspace{-0.05in}
 \end{figure}
 
 We decompose runtime on the 604M-cell grid into individual solver
@@ -144,6 +147,7 @@ the GPU kernels themselves.
 \includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
 \caption{Roofline of the production-step kernel on Perlmutter.}
 \label{fig:roofline}
+\vspace{-0.05in}
 \end{figure}
 
 Nsight Compute profiling demonstrates that every major kernel
@@ -159,6 +163,7 @@ cuFFT library kernel, beyond the reach of application-level tuning.
 \includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
 \caption{Weak scaling at three per-GPU loads on Perlmutter.}
 \label{fig:weakscaling}
+\vspace{-0.05in}
 \end{figure}
 
 Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains

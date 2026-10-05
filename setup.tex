@@ -8,11 +8,13 @@ Perlmutter's CPU nodes with two 64-core AMD EPYC 7763 (Milan) CPUs each.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
+    \vspace{-0.2in}
     \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
     1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
     vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
     difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
     \label{fig:lesgo-cpu-gpu-field}
+    \vspace{-0.1in}
 \end{figure*}
 
 
@@ -69,7 +71,9 @@ velocity difference is $9.00\times10^{-14}$. The GPU-minus-CPU difference
 (Fig.~\ref{fig:lesgo-cpu-gpu-field}c) follows the wake structure but stays
 at roundoff scale, and the hub-height centerline profiles
 (Fig.~\ref{fig:lesgo-cpu-gpu}) are indistinguishable, confirming that the
-two backends are consistent.
+two backends are consistent.  With the LASD model active, the two backends agree 
+to roundoff over the first several steps, and their time-averaged statistics 
+agree within sampling uncertainty.
 
 \begin{figure}[h]
     \centering
@@ -78,6 +82,7 @@ two backends are consistent.
     and GPU runs of Fig.~\ref{fig:lesgo-cpu-gpu-field}. The two curves
     coincide.}
     \label{fig:lesgo-cpu-gpu}
+    \vspace{-0.1in}
 \end{figure}
 
 

@@ -12,11 +12,10 @@ computational price when coupling hundreds of millions of grid points to
 the long integration times these flows demand.
 
 LESGO~\cite{lesgo-web,bouzeid2005} is a widely used open-source pseudo-spectral
-LES solver for ABL and wind-farm flows.  The code has been used for many
-different kinds of simulations including wind-farm~\cite{calaf2010,stevens2014precursor,
+LES solver for ABL and wind-farm flows.  It has been used for many
+different kinds of simulations~\cite{tseng2006} including wind-farm~\cite{calaf2010,stevens2014precursor,
 stevens2016spacing,shapiro2019fad,narasimhan2022veer,zhu2025jhtdbwind,xiao2025diurnal}, rough-surface~\cite{anderson2010,
-anderson2011,anderson2012}, tree canopies~\cite{graham2012}, urban flow and 
-dispersion~\cite{tseng2006}, and wall-bounded turbulence~\cite{porteagel2000,bouzeid2005,
+anderson2011,anderson2012}, tree canopies~\cite{graham2012}, and wall-bounded turbulence~\cite{porteagel2000,bouzeid2005,
 yang2015iwm,bretheim2015}. 
 % Most recently, it has produced public wind-farm LES databases such as
 % JHTDB-wind~\cite{zhu2025jhtdbwind,xiao2025diurnal}.
@@ -103,8 +102,8 @@ will be open-sourced upon acceptance.
 \item We analyze and classify all host--device coupling points by
 their host consumer footprints, enforcing minimal data movement through
 four distinct treatments (gate, relocate, slice, and overlap).
-\item We demonstrate three optimizations on the
-solver's coupling-heavy modules: chunk pipelining across serial process
+\item We develop three optimizations for the structural bottlenecks: 
+chunk pipelining across serial process
 chains to hide inter-process communication delays, batching many small
 work items to mitigate kernel launch overhead, and CPU--GPU
 heterogeneous execution to overlap residual host physics with the GPU

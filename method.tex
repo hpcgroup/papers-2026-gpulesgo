@@ -67,7 +67,7 @@ device-to-host transfers, and 12\% to host-to-device transfers. GPU
 execution accounts for only 6\% (13\,ms), which leaves the GPU
 \textbf{94\% idle}. Most of this traffic comes from a full-field
 synchronization of twelve $O(N^3)$ arrays (420\,MB per step), although
-the host routines read only about 5\,MB of these arrays.
+the host routines read only about 5\,MB of it.
 
 % \begin{figure}[h]
 % \centering
@@ -97,8 +97,7 @@ and host--device transfer footprints, which we develop next.
 
 \begin{table*}[t]
 \centering
-\caption{Taxonomy of host--device coupling points in a pseudo-spectral
-multiphysics LES solver and the data-residency strategies that resolve each class. 
+\caption{Taxonomy of host--device coupling points in LESGO and the data-residency strategies that resolve each class. 
 % Naive costs are measured per step on the reference configuration [R] or the production case
 % [P].
 }
@@ -212,7 +211,7 @@ reflect LESGO, these classes recur across pseudo-spectral multiphysics
 codes, providing a general porting checklist for similar solvers.
 To illustrate how these strategies are applied, we present an example below.
 
-\begin{lstlisting}[float=t,linewidth=\columnwidth,
+\begin{lstlisting}[float=h,linewidth=\columnwidth,
 caption={Structure-aware partial transfer for the
 pressure DC mode. A 1D column transfer (bottom) replaces full 3D field
 synchronization (top).},label={lst:dc}]
@@ -226,8 +225,8 @@ call dc_recurrence(p)       ! touches DC column only
 call dc_recurrence_column(p_col)
 !$acc update device(p(1:2,1,:))  !output column, 1KB
 \end{lstlisting}
-  
 
+% \vspace{0.05in}
 Consider the spectral special mode from Table~\ref{tab:taxonomy}
 (Listing~\ref{lst:dc}). As detailed in
 Section~\ref{sec:bg-numerics}, horizontal FFTs reduce the pressure

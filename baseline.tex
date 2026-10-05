@@ -17,7 +17,7 @@ the step time (Fig.~\ref{fig:stagescale}). For brevity, the ellipses stand for t
 adaptive time step control and explicit time integration, and 
 our GPU port applies the same porting approach to them. Below, we
 first describe the computation in each of these components.
-Sections~\ref{sec:method} and~\ref{sec:opt} then present how we
+Sections~\ref{sec:method} and~\ref{sec:opt} present how we
 optimize them on GPUs.
 
 \begin{algorithm}[h]
@@ -112,6 +112,7 @@ fields, including velocity components, modified pressure, and subgrid
 turbulence scalars, are stored as 3D Fortran arrays.
 
 \begin{figure}[h]
+    \vspace{-0.1in}
     \centering
     \includegraphics[width=\columnwidth]{figs/lesgo_domain_communication.pdf}
     \caption{LESGO's decomposition. (a) The $N_x \times N_y \times N_z$ grid is split along $z$ into $n$ slabs of $N_z/n$ contiguous $x$-$y$ planes. (b) Vertical finite-difference stencils copy each slab's boundary plane into its neighbor's ghost plane.}
@@ -133,16 +134,17 @@ communication. Third, small collective reductions (\texttt{MPI\_Allreduce})
 run over all processes for the adaptive Courant--Friedrichs--Lewy (CFL)
 time step control and runtime diagnostic logging, and over only the
 processes each turbine spans for per-turbine force aggregation. By avoiding 2D
-domain transposes, this 1D slab decomposition keeps computationally 
-intensive horizontal FFTs local to each process at the expense of a globally coupled 
+domain transposes, this 1D slab decomposition keeps
+horizontal FFTs local to each process at the expense of a globally coupled 
 vertical solve.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
-    \caption{CPU strong scaling of LESGO on the production wind-farm case of Section~\ref{sec:setup}. 
+    \caption{CPU strong scaling of LESGO on the production case (Section~\ref{sec:setup}). 
     The cross marks 128 processes on a single node, which exceeds node memory.}
     \label{fig:ceiling}
+    \vspace{-0.1in}
 \end{figure}
     
 
@@ -155,7 +157,8 @@ As shown in Figure~\ref{fig:ceiling}, increasing cores from
 16 to 64 results in only 1.08$\times$ speedup, while 128 processes exhaust the node's memory. 
 Four nodes at 512 processes plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
 At this scaling ceiling, accumulating converged turbulence statistics
-require running hundreds of thousands of time steps. As a result, a single
-production simulation takes several hours to days to complete, making
+require hundreds of thousands of time steps. As a result, a single
+production run takes several days or even months to complete, making
 large-scale wind-farm studies computationally impractical. This significant
 performance gap motivated our development of the GPU port.
+ 
