@@ -182,18 +182,21 @@ DERIV_NZ400 = [0.02373509, 0.01079348, 0.006440276]
 SGS_NZ400 = [0.03306066, 0.01535980, 0.009332211]
 deriv = [c * d / (d + s) for c, d, s in zip(DS_COMBINED, DERIV_NZ400, SGS_NZ400)]
 sgs = [c - d for c, d in zip(DS_COMBINED, deriv)]
-# Projection has no dedicated treatment in the paper and is folded into Other.
+# Projection (ProjectVelocity) is drawn as its own segment; Other holds the
+# remaining routines elided in Algorithm 1.
 PROJECTION = [0.0053, 0.0036, 0.0028]
 OTHER = [0.0304, 0.0290, 0.0309]
 # Colors and hatches follow the PSSG lists in order, series i taking
-# PALETTE1[i] (the palette with black removed) and HATCHES[i].
+# PALETTE1[i] (the palette with black removed) and HATCHES[i], except that
+# Projection and Other swap slots 4 and 5: Other keeps rose (stgother in
+# Algorithm 1) and its direct labels stay legible over "++" rather than "**".
 stages = [
     ("Pressure",     [0.0570, 0.0235, 0.0172], VERM,   "white", "xxx"),
     ("Derivatives",  deriv,                    BLUE,   "white", "//"),
     ("SGS",          sgs,                      GREEN,  "white", "|||"),
     ("Turbines",     [0.0082, 0.0041, 0.0020], PURPLE, "white", "OO"),
-    ("Other",        [o + p for o, p in zip(OTHER, PROJECTION)],
-                                               ROSE,   "black", "++"),
+    ("Projection",   PROJECTION,               ORANGE, "black", "**"),
+    ("Other",        OTHER,                    ROSE,   "black", "++"),
 ]
 
 fig, ax = plt.subplots(figsize=ps.FIGSIZE)
@@ -223,8 +226,8 @@ ax.set_ylabel("Stage time per step (ms)")
 ax.set_title("Runtime breakdown on the 604M-cell case")
 ax.grid(True, axis="y")
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles[::-1], labels[::-1], loc="upper right",
-          handletextpad=0.4, borderaxespad=0.2, handlelength=1.2,
+ax.legend(handles[::-1], labels[::-1], loc="upper right", ncol=2,
+          columnspacing=0.8, handletextpad=0.4, borderaxespad=0.2, handlelength=1.2,
           labelspacing=0.35)
 fig.tight_layout(pad=0.3)
 save(fig, "fig_stagescale")

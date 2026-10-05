@@ -118,9 +118,9 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.
-    \texttt{Other} includes the velocity projection and the routines elided
-    in Algorithm~\ref{alg:step}.}
+    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
+    % \texttt{Other} includes the velocity projection and the routines elided
+    % in Algorithm~\ref{alg:step}.}
     \label{fig:stagescale}
     \vspace{-0.05in}
 \end{figure}
@@ -132,15 +132,14 @@ the SGS stage from 35\,ms to 11\,ms, and the turbine stage from 8\,ms
 to 2\,ms, 
 while the pressure solver exhibits
 superlinear scaling up to 32 GPUs as thinner slab dimensions deepen the
-tridiagonal pipeline (Section~\ref{sec:opt-tridag}). At high GPU
-counts, execution time is bounded by a constant overhead. 
-This overhead is primarily from the \texttt{Other} stage, which comprises
-latency-bound collectives and the residual kernel launch budget after
-batching (Section~\ref{sec:opt-batch}). The dominant collective is the
-global CFL reduction required for adaptive time stepping and
-turbine-forcing load balance. These costs reflect algorithmic minima
-governed by interconnect and host-runtime latency, not inefficiencies in
-the GPU kernels themselves.
+tridiagonal pipeline (Section~\ref{sec:opt-tridag}). The \texttt{Other}
+stage holds a fixed cost of about 30\,ms per step. Its main
+component is the host-side stage of the turbine coupling, whose cost
+depends on the turbine count and the blade discretization rather than
+on the grid size. The stage also includes collectives and kernel launch
+time. The dominant collective is the global CFL reduction required for 
+adaptive time stepping and turbine-forcing load balance. 
+Together, these components form a fixed per-step cost.
 
 \begin{figure}[h]
 \centering
