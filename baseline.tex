@@ -63,8 +63,8 @@ of turbulent motions smaller than the grid spacing. Every $c$-th step
 ($c$=5 in production runs), \texttt{UpdateLASDCoefficient()} recomputes
 the LASD model coefficient (Section~\ref{sec:bg-physics}). It filters
 21 3D fields at two filter widths with 2D FFTs and interpolates four fields along
-fluid-particle trajectories, which makes it the most irregular and
-memory-bound routine in the solver (Section~\ref{sec:opt-batch}). On
+fluid-particle trajectories, which makes it the most irregular
+routine in the solver (Section~\ref{sec:opt-batch}). On
 every step, \texttt{SGSStress()} computes the SGS stress from this
 coefficient and the velocity gradients, and \texttt{StressDivergence()}
 takes its divergence.
@@ -160,5 +160,8 @@ At this scaling ceiling, accumulating converged turbulence statistics
 require hundreds of thousands of time steps. As a result, a single
 production run takes several days or even months to complete, making
 large-scale wind-farm studies computationally impractical. This significant
-performance gap motivated our development of the GPU port.
+performance gap motivated our development of the GPU port. This ceiling also 
+reflects inefficiencies in the current CPU implementation. 
+Section~\ref{sec:opt} describes the optimizations we
+propose to address them.
  

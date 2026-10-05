@@ -150,13 +150,16 @@ the GPU kernels themselves.
 \vspace{-0.05in}
 \end{figure}
 
-Nsight Compute profiling demonstrates that every major kernel
-operates near the hardware's memory-bandwidth roof
+Nsight Compute profiling demonstrates that the dominant time-consuming
+kernels lie close to the memory-bandwidth roof
 (Fig.~\ref{fig:roofline}). Custom field kernels achieve 67--88\% of peak DRAM
 bandwidth at 24--37\% of peak compute throughput, while batched cuFFT
-kernels reach 48--82\% of peak memory bandwidth. The remaining bandwidth 
-gap on the largest transform lies in
-cuFFT library kernel, beyond the reach of application-level tuning.
+kernels reach 48--82\% of peak memory bandwidth. Together, these two
+families account for 98.5\% of profiled kernel time. 
+The two actuator-line kernels fall below the roof, which we attribute
+to irregular gather and scatter at off-grid blade points. They take
+only 1.5\% of kernel time, so their effect on overall performance is
+negligible.
 
 \begin{figure}[h]
 \centering

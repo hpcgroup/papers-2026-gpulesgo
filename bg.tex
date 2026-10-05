@@ -60,12 +60,12 @@ computational complexity of wind-farm LES in LESGO.
 viscosity closes the SGS stress in Eq.~\ref{eq:les}. The model computes
 its coefficient dynamically~\cite{germano1991}, averages it along
 fluid-particle trajectories~\cite{meneveau1996}, and recovers scale
-dependence through a second test
-filter~\cite{porteagel2000,bouzeid2005}. Each
-coefficient update applies two spectral test filters to 21 velocity
-and tensor fields (requiring batched 2-D FFTs across all vertical levels) and
-advects four accumulator fields along particle back-trajectories via
-trilinear interpolation. As the accuracy backbone of LESGO for
+dependence through a second test filter~\cite{porteagel2000,bouzeid2005}. 
+% Each coefficient update applies two spectral test filters to 21 velocity
+% and tensor fields (requiring batched 2-D FFTs across all vertical levels) and
+% advects four accumulator fields along particle back-trajectories via
+% trilinear interpolation. 
+As the accuracy backbone of LESGO for
 heterogeneous ABL flows, this model relies on an irregular memory access
 pattern that intertwines filtering, history tracking, and interpolation.
 Consequently, mapping this formulation to GPUs presents distinct
