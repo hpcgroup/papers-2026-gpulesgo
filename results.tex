@@ -174,23 +174,12 @@ a fixed grid size and the domain grows vertically with process count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
 64 GPUs). The other two problem sizes exhibit similarly strong weak-scaling
-behavior. This confirms that scaling efficiency is maintained as long as
-each GPU carries a sufficiently large workload, which is the regime
-that production runs occupy. These results demonstrate the effectiveness
+behavior. 
+% This confirms that scaling efficiency is maintained as long as
+% each GPU carries a sufficiently large workload, which is the regime
+% that production runs occupy. 
+These results demonstrate the effectiveness
 of optimizations presented in Section~\ref{sec:method} and ~\ref{sec:opt}.
-
-While a 2D pencil decomposition could scale to larger process counts, the
-1D slab structure fully satisfies our target physics. LESGO does not
-pursue ever-larger wind-farm domains. It instead resolves the
-turbulence physics of horizontally periodic atmospheric boundary
-layers and their interaction with turbine arrays, where the grid is
-set by the scales of turbulent motion rather than by domain extent.
-The demonstrated range therefore provides ample computational
-support for production research of this class. For this reason, 
-retaining the 1D slab
-decomposition avoids an unnecessary architectural rewrite while
-preserving structural alignment with the community-maintained CPU
-codebase.
 
 % \subsection{Portability and capacity}
 % \label{sec:results-portability}

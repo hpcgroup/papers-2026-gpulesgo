@@ -123,7 +123,8 @@ turbulence scalars, are stored as 3D Fortran arrays.
 Inter-process communication in this slab topology follows three main patterns.
 First, vertical finite-difference stencils require nearest-neighbor halo
 exchanges, in which each process swaps a single horizontal plane with the
-processes directly below and above it (Fig.~\ref{fig:lesgo-decomposition}b). \texttt{ProjectVelocity()} ends with such an exchange
+processes directly below and above it (Fig.~\ref{fig:lesgo-decomposition}b).
+\texttt{ProjectVelocity()} ends with such an exchange
 to refresh the ghost planes for the next step. Second, the pressure
 Poisson solve chains all processes together. Each vertical tridiagonal
 system spans the entire domain height, so the distributed Thomas algorithm
@@ -135,8 +136,15 @@ run over all processes for the adaptive Courant--Friedrichs--Lewy (CFL)
 time step control and runtime diagnostic logging, and over only the
 processes each turbine spans for per-turbine force aggregation. By avoiding 2D
 domain transposes, this 1D slab decomposition keeps
-horizontal FFTs local to each process at the expense of a globally coupled 
-vertical solve.
+horizontal FFTs local to each process at the expense of a globally coupled
+vertical solve. 
+% We retain this decomposition in the GPU port.  Although a 2D
+% pencil decomposition can scale to more processes, the 1D slab layout fully
+% satisfies our target physics. LESGO does not pursue ever-larger wind-farm
+% domains. It instead resolves the turbulence of horizontally periodic
+% atmospheric boundary layers and its interaction with turbine arrays.
+% The slab layout therefore supports production runs of this class while
+% preserving structural alignment with the community-maintained CPU codebase.
 
 \begin{figure}[h]
     \centering
