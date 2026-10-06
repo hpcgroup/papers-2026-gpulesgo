@@ -63,12 +63,12 @@ checkpoints~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. LESGO
 does not fit this mold for two reasons. First, mirroring also
 duplicates arrays that no kernel reads, which wastes device memory and
 increases the number of GPUs a given grid requires. Second, several
-routines run slower on the GPU than on CPUs. These routines should
+routines run slower on the GPU than on the CPU. These routines should
 therefore remain on the host.
 Mirroring consequently transfers full fields at every step
 wherever they consume solver state. 
 On our reference configuration ($256^3$ grid with two
-wind turbines on 4 A100 GPUs), \texttt{nsys} profiling shows that the
+wind turbines on 4 A100 GPUs), profiling shows that the
 GPU computes for only 6\% of each time step, while host--device
 transfers take most of the rest. In fact, these
 transfers are largely wasted, because the host needs only a small part
@@ -105,13 +105,13 @@ on where each routine computes, and we turn to this decision next.
 \subsection{Deciding Where to Compute and What to Move}
 \label{sec:method-taxonomy}
 
-Next, we first describe how we offload computation and decide which routines remain on
+We first describe how we offload computation and decide which routines remain on
 the host. We then classify the coupling points in LESGO and
 present four treatments that minimize data movement for each class.
 
 \begin{table*}[t]
 \centering
-\caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the consumer runs and which data moves between host and device.
+\caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the host routine at the coupling point runs and which data moves between host and device.
 % Naive costs are measured per step on the reference configuration [R] or the production case
 % [P].
 }
@@ -183,28 +183,28 @@ subvolume), how often it executes (every step, periodically, or only
 under a model option), and its access intent (read-only, write-only, or
 read-modify-write). We then group and classify all coupling points in
 LESGO into the nine classes listed in Table~\ref{tab:taxonomy}. For
-each class, the table gives its concrete instance in LESGO, the
+each class, the table gives its concrete instance in LESGO and the
 transfer cost that a naive port pays per step.
 
 Working through the nine classes, we found that four treatments,
 \emph{gate}, \emph{relocate}, \emph{slice}, and \emph{overlap}, suffice
-to decide where and when each consumer runs and which data moves between
+to decide where and when each host routine runs and which data moves between
 host and device. 
 % Each exploits a different property of
 % the coupling point, and we consider them in this order, moving to the
 % next only when the previous one does not apply.
 
 \vspace{0.08in}
-\textbf{Gate} handles consumers that run only under a model option or
+\textbf{Gate} handles host routines that run only under a model option or
 on a subset of steps. For example, only the CPU fallback of the SGS
 model reads the velocity gradients, yet a naive port copies all
 gradient fields to the host at every step, even when the selected SGS
 model runs on the GPU. We wrap such a transfer in the same guard that
-controls its consumer, so the transfer disappears whenever the consumer
-does not run.
+controls the host routine, so the transfer disappears whenever the
+routine does not run.
 
 \vspace{0.08in}
-\textbf{Relocate} exploits parallelism in the consumer. If the host
+\textbf{Relocate} exploits parallelism in the host routine. If the
 routine parallelizes well, we port it to the GPU so it can read
 device-resident data in place. We apply
 this to the time-integration and projection pipeline, the diagnostic
@@ -212,7 +212,7 @@ reductions, actuator sampling and force projection, and the distributed
 tridiagonal chains. 
 
 \vspace{0.08in}
-\textbf{Slice} applies when the consumer should stay on the host, but
+\textbf{Slice} applies when a routine should stay on the host but
 touches only a small part of a field. For example, the pressure zero-wavenumber
 recurrence remains on the host, yet it
 reads and writes only the DC column of the pressure field, about
@@ -220,19 +220,19 @@ reads and writes only the DC column of the pressure field, about
 \texttt{update self} and \texttt{update device} directives.
 
 \vspace{0.08in}
-\textbf{Overlap} hides host computation that still run at every
+\textbf{Overlap} hides host computation that still runs at every
 step. For example, the airfoil polar lookups 
 follow data-dependent branches and stay on the host. Their inputs are
 fixed early in the time step, and the GPU does not need their outputs
-until force projection. We launch the GPU kernels in between
+until force projection. We launch the intervening GPU kernels
 asynchronously and run the lookups while they execute, which hides the
 host time behind device execution.
 
 
 The instances in Table~\ref{tab:taxonomy} come from LESGO, but the
 same classes appear in other pseudo-spectral multiphysics
-codes, providing a general porting checklist for similar solvers.
-To illustrate how these strategies are applied, we present an example below.
+codes, so the table can serve as a porting checklist for similar solvers.
+We next illustrate the slice treatment with an example from the pressure solver.
 
 \begin{lstlisting}[float=h,linewidth=\columnwidth,
 caption={Structure-aware partial transfer in the
@@ -255,7 +255,7 @@ end do
 Listing~\ref{lst:dc} shows the slice treatment in the pressure solver.
 Each vertical column of the pressure array \texttt{p} forms an
 independent system along $z$, and the GPU solves all columns in one
-batched call. A single column cannot use this solver and is instead
+batched call. One column, however, cannot use this solver and is instead
 computed by a serial loop along $z$ (Section~\ref{sec:bg-numerics}).
 Each level of this loop depends on the level below it, and the
 dependency continues across processes, because each process starts from

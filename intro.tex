@@ -65,7 +65,7 @@ ports~\cite{esclapez2025dales,giorgetta2022,xiao2025cales} run all
 physics on the GPU, so full fields return to the host mainly for output.
 However, in LESGO we find that some operations suit the CPU better, such as the 
 serial pressure recurrence and the airfoil table lookups, and they read solver
-state every step. Mirroring leaves open how to serve these consumers,
+state every step. Mirroring leaves open how to serve these host routines,
 and each full-field transfer stalls the GPU. Mirroring every
 array also consumes device memory, so that LESGO needs more GPUs for the
 same problem size.
@@ -78,10 +78,10 @@ production-scale wind-farm LES within practical reach. We begin by measuring
 two placement strategies on LESGO, CUDA managed memory and
 array mirroring, and trace the bottleneck in both to host--device
 coupling points. Guided by this analysis, we analyze all coupling points across the solver,
-classify them by host consumer read footprints, and apply four treatments: 
+classify them by host read footprints, and apply four treatments: 
 \emph{gate} skips a transfer whenever its
-conditional or infrequent consumer does not execute; \emph{relocate} ports
-the consumer to the GPU and removes the transfer altogether; \emph{slice}
+conditional or infrequent host routine does not execute; \emph{relocate} ports
+the host routine to the GPU and removes the transfer altogether; \emph{slice}
 shrinks a transfer to the subset of the field the host touches; and
 \emph{overlap} hides an irreducible transfer behind concurrent GPU execution.
 Beyond these data-residency treatments, we apply three further optimizations
@@ -100,7 +100,7 @@ physics pipeline. To our knowledge, this is the first directive-based
 GPU LES with actuator-line wind-farm coupling at this scale. Our code 
 will be open-sourced upon acceptance.
 \item We analyze and classify all host--device coupling points by
-their host consumer footprints, enforcing minimal data movement through
+their host read footprints, enforcing minimal data movement through
 four distinct treatments (gate, relocate, slice, and overlap).
 \item We develop three optimizations for the structural bottlenecks: 
 chunk pipelining across serial process
