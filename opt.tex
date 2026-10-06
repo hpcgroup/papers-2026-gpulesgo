@@ -1,5 +1,6 @@
-This section presents three optimizations for structural bottlenecks and 
-porting practices. Unless noted
+This section presents three optimizations that target structural
+bottlenecks of the solver, followed by general practices from our
+porting effort. Unless noted
 otherwise, all performance measurements correspond to the 604M-cell
 production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
 
@@ -15,84 +16,77 @@ production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
     \vspace{-0.05in}
 \end{figure}
 
-In the spectral Poisson solve (\texttt{PoissonTridiag()} in
-Algorithm~\ref{alg:step}), independent 1D tridiagonal systems along $z$
-arise for each horizontal wavenumber pair. This yields approximately
-$590K$ independent systems of 512 unknowns, each distributed across
-all 16 processes in 1D slab domain decomposition. Standard forward
-elimination and back substitution in the Thomas algorithm operate
-serially along $z$, forcing process $k$ to idle until process $k-1$ completes
-its forward pass.
+The spectral Poisson solve (\texttt{PoissonTridiag()} in
+Algorithm~\ref{alg:step}) solves one tridiagonal system along $z$ for
+each horizontal wavenumber pair. Under the slab decomposition, every
+system spans all $P$ processes (Section~\ref{sec:bg-impl}). The Thomas
+algorithm sweeps each system serially along $z$, so process $k$ idles
+until process $k-1$ finishes its forward elimination, and back
+substitution then returns down the chain in the same way.
 
-To overcome this serialization, we exploit the mutual independence of these 
-systems by partitioning them into $c$ chunks and pipelining the 
-solve~\cite{povitsky1999,povitsky2000} (Fig.~\ref{fig:tridag}). In forward pass, 
-process $k$ handles chunk $m$, transmits boundary coefficients downstream to 
-process $k{+}1$, and immediately proceeds to chunk $m{+}1$.
-Furthermore, chunking eliminates the global turnaround delay between forward 
-elimination and back substitution. Ordinarily, back substitution must wait for 
-the forward sweep to traverse the entire process chain. Here, the last process 
-initiates back substitution for chunk $m$ as soon as its forward pass finishes, 
-overlapping the backward wave of early chunks with the forward sweep of later ones. 
+To remove this serialization, we exploit the independence of the
+systems. We partition them into $c$ chunks and pipeline the chunks
+through the process chain (Fig.~\ref{fig:tridag})~\cite{povitsky1999,povitsky2000}. 
+In the forward pass, process $k$ eliminates
+chunk $m$, sends its boundary coefficients to process $k{+}1$ with
+GPU-aware MPI, and immediately proceeds to chunk $m{+}1$. Process
+$k{+}1$ meanwhile works on chunk $m$, so all processes compute
+concurrently once the pipeline fills.
+Moreover, with chunking, the last process starts back substitution for chunk $m$
+as soon as it finishes the forward pass of that chunk, so the backward
+wave of early chunks overlaps the forward wave of later ones.
 Unlike reduced-system libraries that alter the elimination
-arithmetic~\cite{laszlo2016,kim2021pascal}, our pipelined approach
-leaves the inner Thomas loops untouched, ensuring results match the
-sequential baseline.
+arithmetic~\cite{laszlo2016,kim2021pascal}, our approach leaves the
+inner Thomas loops untouched, so the results match the sequential
+solve.
 
 \subsection{Batching Many Small Work Items}
 \label{sec:opt-batch}
 
-Several solver components decompose into many small, independent work
-units. However, each unit is too lightweight to saturate the GPU on its own, 
-and has fixed launching overhead. We batch these
+In the solver, many components decompose into small, independent work
+units. However, each unit is too lightweight to saturate the GPU on its own
+and still incurs a fixed launch overhead. We batch these
 units into fewer, larger device operations to amortize that overhead and
 improve hardware occupancy.
 We demonstrate this strategy with the actuator-line turbine model and the LASD subgrid-scale closure.
 
-For the actuator-line model (\texttt{Turbines()}), 
-processing turbines individually repeats device uploads, kernel
-launches, synchronizations, and small collective reductions for each
-turbine, accumulating over 1,000 \texttt{MPI\_Allreduce} operations per
-process every step. We therefore batch the entire farm into unified device
-operations. Blade-point tables for all turbines reside permanently in
-device memory. We use a single sampling kernel and a single projection kernel
-to process all concatenated turbine points, and all reduction quantities
-travel in one packed \texttt{MPI\_Allreduce}. Together, these changes
-cut per-step kernel launch and collective call counts by an order of
-magnitude and eliminate per-turbine device allocations.
+For the actuator-line model (\texttt{Turbines()}), a direct port
+loops over the turbines and repeats the device uploads, kernel
+launches, synchronizations, and small collective reductions for each of
+them. Across the farm, this adds up to more than 1,000
+\texttt{MPI\_Allreduce} calls per process at each step. We instead
+treat the whole farm as one batch. The blade-point tables of all
+turbines stay in device memory for the entire run. We then launch one sampling kernel
+and one projection kernel that process the blade points of all turbines
+together, and a single packed \texttt{MPI\_Allreduce} carries all
+reduction quantities. These changes reduce the kernel launches and
+collective calls per step by an order of magnitude and remove all
+per-turbine device allocations.
 
-The Lagrangian scale-dependent (LASD) subgrid-scale model
-(\texttt{UpdateLASDCoefficient()} in Algorithm~\ref{alg:step}) demonstrates the
-same fragmentation. Each update filters 21 3D velocity and tensor fields at two 
-test-filter scales: for every horizontal plane, it applies forward 2D FFTs, 
-damps selected wavenumber modes, and applies inverse 2D FFTs. 
-It also interpolates four accumulator fields to their upstream departure points
-$x - u\,\Delta t$. A naive GPU port therefore issues thousands of
-single-plane 2D FFTs per update, none large enough to saturate the
-device. We therefore batch transforms along the
-vertical dimension by promoting 2D scratch planes to 3D arrays, so that
-a single batched cuFFT call filters all vertical levels of a field at
-once. This batching collapses thousands of launches into a few dozen
-batched cuFFT calls while exposing enough parallel work per call to 
-fully occupy the device.
+The Lagrangian scale-dependent (LASD) subgrid-scale model (\texttt{UpdateLASDCoefficient()} in
+Algorithm~\ref{alg:step}) has the same problem. Each coefficient update
+filters 21 3D velocity and tensor fields at two test-filter scales. For
+each horizontal plane, the filter applies a forward 2D FFT, damps
+selected wavenumbers, and applies an inverse 2D FFT. A direct port
+therefore launches thousands of single-plane FFTs per update, and none
+of them is large enough to fill the GPU. We instead promote the 2D
+scratch planes to 3D arrays, so that one batched cuFFT call filters all
+vertical levels of a field at once. The thousands of launches become a
+few dozen batched calls, and each call carries enough work to keep the
+GPU busy.
 
 \subsection{Heterogeneous CPU--GPU Execution}
 \label{sec:opt-overlap}
 
-We initially ported every computational stage to the GPU, but found that
-blade-force evaluation in the actuator-line model
-(\texttt{ComputeBladeForces()} in Algorithm~\ref{alg:step}) actually ran
-\emph{slower} on the device. 
-The production case involves only 10,800 actuator points, far too few
-to saturate a GPU. Moreover, each point traverses a data-dependent path
+As discussed in Section~\ref{sec:method-taxonomy}, not
+every kernel suits the GPU. For example, blade-force evaluation in
+the actuator-line model (\texttt{ComputeBladeForces()} in
+Algorithm~\ref{alg:step}) runs \emph{slower} on the device than
+on the host.
+Each actuator point traverses a data-dependent path
 through the airfoil polar lookup, causing warps to serialize.
-Kernel-launch and data-transfer overheads therefore exceed the useful
-computation. We accordingly keep this routine on the host. 
-This decision, however, introduces a new challenge. Host execution
-costs $\sim$28\,ms per step, and running it synchronously would leave
-the GPU idle at every time step.
-We address this by overlapping host computation with concurrent device
-work.
+Kernel-launch and data-transfer overheads also exceed the useful
+computation. We accordingly keep this routine on the host.
 
 \begin{figure}[h]
     \centering
@@ -101,62 +95,69 @@ work.
     \label{fig:overlap}
 \end{figure}
 
-Such overlap is feasible because blade-force evaluation only reads
-velocities produced at the start of the time step, and its outputs are
-not consumed until the force-projection stage later in the step. We
-exploit this slack by splitting the actuator-line model into two
-decoupled phases around the convection stage
+However, running this routine synchronously on the host would add
+$\sim$28\,ms to every step and leave the GPU idle meanwhile. We avoid
+this cost by decoupling blade-force evaluation from the GPU
+work. The evaluation reads only the velocities produced at the start of the time
+step, and the solver does not need its outputs until force projection
+later in the step. The convection stage in between neither produces
+its inputs nor consumes its outputs. We therefore split the
+actuator-line model into two decoupled phases around convection
 (Fig.~\ref{fig:overlap}). Phase~1 samples blade-point velocities on the
-GPU and transfers the compact data packet to the host, returning control
-immediately without flushing the device queue. The GPU then proceeds
-with convection while the CPU evaluates aerodynamic forces.
-Phase~2 uploads the calculated forces and projects them onto the
-Eulerian grid. 
-This overlap removes host computation from the critical path, saving
-30\,ms per step and raising overall GPU utilization to
-\textbf{93\%}. This pattern generalizes to any host routine whose inputs
-remain fixed at a known stage of the time step, effectively turning the
-CPU into a coprocessor for code that resists GPU offloading.
+GPU, copies them to the host, and returns without waiting for the
+device queue to drain. The CPU then evaluates blade forces while the GPU
+runs convection. Phase~2 uploads the forces to the device and projects them onto the
+grid. This decoupling removes host computation from the critical path,
+saves $\sim$30\,ms per step, and raises overall GPU utilization to
+\textbf{93\%}. The same approach applies to any host routine whose
+inputs are fixed early in the step and whose outputs are needed only
+later.
 
 \subsection{Experiences Porting to Modern GPUs}
 \label{sec:opt-impl}
 
-Beyond the optimizations above, we identified three general practices from
-our porting effort that apply broadly to directive-based GPU codes.
+Beyond the optimizations above, we identified three practices from
+our porting effort that apply to directive-based GPU codes in general.
 
 \vspace{0.08in}
-\textbf{Compute Uniformly, Then Patch the Exceptions.} Conditional
-logic inside a hot kernel forces every thread in a warp to serialize
-along divergent paths, even threads that never take the branch. When
-the exceptional points form a lower-dimensional subset of the iteration
-space, such as $O(N_xN_y)$ boundary cells versus $O(N_xN_yN_z)$ interior cells,
-this penalty is easy to avoid. We use the uniform interior stencil
-over the entire domain in a single branch-free kernel with coalesced
-accesses, then overwrite boundary values with a second, far smaller
-patch kernel. The redundant work is negligible compared to the volume
-computation.
+\textbf{Compute Uniformly, Then Patch the Exceptions.} Branch
+divergence within a warp forces a hot kernel to execute the divergent
+paths serially. When the exceptional points form a lower-dimensional
+subset of the iteration space, such as $O(N_xN_y)$ boundary cells
+versus $O(N_xN_yN_z)$ interior cells, this penalty can be avoided. We
+apply the interior stencil uniformly across the entire domain in a
+single branch-free kernel with coalesced memory accesses, and
+subsequently overwrite the boundary values with a second, substantially
+smaller kernel. The redundant computation on boundary cells is
+negligible relative to the volume computation.
 
 \vspace{0.08in}
 \textbf{Derive the Parallel Domain from the Data, Not the Loop Nest.}
-Translating CPU loop nests directly into GPU kernels tends to inherit
-the serial structure of the original code, with poor occupancy and
-strided memory traffic. We instead let the data layout
-drive the thread decomposition. For regular stencil kernels, we
-collapse all spatial loops with the contiguous index innermost so that
-warps issue coalesced loads. For work scattered across many small model
-instances, we flatten all instances into a single parallel domain of
-work items, one thread per item regardless of which instance owns it.
+A GPU kernel translated directly from a CPU loop nest inherits the loop
+structure of the original code, which typically results in low
+occupancy and strided memory access. We instead derive the thread
+decomposition from the data layout. For regular stencil kernels, we
+collapse all spatial loops with the contiguous index innermost, so that
+each warp issues coalesced loads. For workloads distributed across many
+small model instances, such as the turbines in
+Section~\ref{sec:opt-batch}, we flatten all
+instances into a single parallel domain and map each work item to one
+thread, so that a single kernel exposes the parallelism of all
+instances at once.
 
 \vspace{0.08in}
 \textbf{Align Code Structure with Compiler Offloading Models.} The
-NVHPC compiler places small local-array temporaries in thread-private
-local memory, which is backed by device DRAM and far slower than
-registers. We scalar expand these temporaries so that the compiler can
-promote them to registers. 
+NVHPC compiler places small local arrays in thread-private local
+memory, which resides in device DRAM and is substantially slower than
+registers. We apply scalar replacement to these arrays, which allows
+the compiler to promote them to registers.
 % We treat the diagnostic output from \texttt{-Minfo=accel} as a mandatory 
 % build check to verify that it does so. 
-Besides, we found that OpenACC allocates per-thread temporary arrays for every
-invocation of Fortran array-valued functions and utility routines. This
-means each such call generates device DRAM traffic with substantial
-overhead. We therefore manually inline these routines at their call
-sites to eliminate the allocation entirely. 
+In addition, several Fortran utility functions in LESGO, such as the
+complex-multiplication operator used in spectral differentiation,
+return their result in a newly allocated array. Inside a GPU kernel,
+each call to such a function therefore triggers a device memory
+allocation, whose cost far exceeds the few arithmetic operations the
+function performs. We manually inline these functions at their call
+sites, so that each result is written directly into the target array
+without any temporary allocation.

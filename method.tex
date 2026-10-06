@@ -22,6 +22,54 @@ strategies (Section~\ref{sec:method-placement}). We then decide where
 each routine computes and which data moves at each host--device
 coupling point (Section~\ref{sec:method-taxonomy}).
 
+
+\begin{table*}[t]
+  \centering
+  \caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the host routine at the coupling point runs and which data moves between host and device.
+  % Naive costs are measured per step on the reference configuration [R] or the production case
+  % [P].
+  }
+  \label{tab:taxonomy}
+  \footnotesize
+  \renewcommand{\arraystretch}{1.2}
+  \rowcolors{2}{gray!12}{white}
+  \begin{tabular}{@{}
+    >{\raggedright\arraybackslash}p{0.8in}
+    >{\raggedright\arraybackslash}p{2.35in}
+    >{\raggedright\arraybackslash}p{1.05in}
+    >{\raggedright\arraybackslash}p{2.25in}@{}}
+  \toprule
+  Class & Instance in LESGO & Naive cost per step & Treatment \\
+  \midrule
+  Boundary plane & wall-stress model reads $u,v,w$ at the walls &
+  full fields, 420\,MB & \emph{slice} to wall planes, later
+  \emph{relocate} \\
+  Conditional & velocity gradients read by the CPU SGS fallback only &
+  9 fields, 315\,MB & \emph{gate} on the SGS model choice \\
+  Spectral mode & pressure zero-wavenumber recurrence (serial in $z$) &
+  3 full-field transfers & \emph{slice} to the DC column
+  ($\sim$1\,KB) \\
+  Stale entry & \texttt{copyin} of pressure at solver entry &
+  34\,MB & \emph{slice} to a seeded ghost plane via \texttt{create} \\
+  Pipeline state & time integration and projection read $u,v,w$, RHS &
+  210\,MB & \emph{relocate}, keep the update pipeline
+  device-resident \\
+  Actuator & blade sampling and force projection & 2 full-field
+  crossings & \emph{relocate}, exchange $O(\text{blade points})$
+  (\S\ref{sec:opt-batch}) \\
+  Diagnostics & energy, divergence, checkpoint writes & 963\,MB 
+  & \emph{relocate} reductions, \emph{gate} output
+  steps \\
+  Serial chain & tridiagonal Thomas chains spanning processes &
+  host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
+  (\S\ref{sec:opt-tridag}) \\
+  Host physics & tabulated airfoil polar lookups & serialized 28\,ms
+  & \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
+  \bottomrule
+  \end{tabular}
+  \vspace{-0.1in}
+  \end{table*}
+
 \subsection{Data Placement}
 \label{sec:method-placement}
 
@@ -109,53 +157,6 @@ We first describe how we offload computation and decide which routines remain on
 the host. We then classify the coupling points in LESGO and
 present four treatments that minimize data movement for each class.
 
-\begin{table*}[t]
-\centering
-\caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the host routine at the coupling point runs and which data moves between host and device.
-% Naive costs are measured per step on the reference configuration [R] or the production case
-% [P].
-}
-\label{tab:taxonomy}
-\footnotesize
-\renewcommand{\arraystretch}{1.2}
-\rowcolors{2}{gray!12}{white}
-\begin{tabular}{@{}
-  >{\raggedright\arraybackslash}p{0.8in}
-  >{\raggedright\arraybackslash}p{2.35in}
-  >{\raggedright\arraybackslash}p{1.05in}
-  >{\raggedright\arraybackslash}p{2.25in}@{}}
-\toprule
-Class & Instance in LESGO & Naive cost per step & Treatment \\
-\midrule
-Boundary plane & wall-stress model reads $u,v,w$ at the walls &
-full fields, 420\,MB & \emph{slice} to wall planes, later
-\emph{relocate} \\
-Conditional & velocity gradients read by the CPU SGS fallback only &
-9 fields, 315\,MB & \emph{gate} on the SGS model choice \\
-Spectral mode & pressure zero-wavenumber recurrence (serial in $z$) &
-3 full-field transfers & \emph{slice} to the DC column
-($\sim$1\,KB) \\
-Stale entry & \texttt{copyin} of pressure at solver entry &
-34\,MB & \emph{slice} to a seeded ghost plane via \texttt{create} \\
-Pipeline state & time integration and projection read $u,v,w$, RHS &
-210\,MB & \emph{relocate}, keep the update pipeline
-device-resident \\
-Actuator & blade sampling and force projection & 2 full-field
-crossings & \emph{relocate}, exchange $O(\text{blade points})$
-(\S\ref{sec:opt-batch}) \\
-Diagnostics & energy, divergence, checkpoint writes & 963\,MB 
-& \emph{relocate} reductions, \emph{gate} output
-steps \\
-Serial chain & tridiagonal Thomas chains spanning processes &
-host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
-(\S\ref{sec:opt-tridag}) \\
-Host physics & tabulated airfoil polar lookups & serialized 28\,ms
-& \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
-\bottomrule
-\end{tabular}
-\vspace{-0.1in}
-\end{table*}
-
 The structure of LESGO makes compute offloading straightforward. The
 kernels that update the solver arrays are loop nests over $x$, $y$, and
 $z$ whose iterations are independent. We therefore parallelize each
@@ -221,12 +222,12 @@ reads and writes only the DC column of the pressure field, about
 
 \vspace{0.08in}
 \textbf{Overlap} hides host computation that still runs at every
-step. For example, the airfoil polar lookups 
-follow data-dependent branches and stay on the host. Their inputs are
-fixed early in the time step, and the GPU does not need their outputs
-until force projection. We launch the intervening GPU kernels
-asynchronously and run the lookups while they execute, which hides the
-host time behind device execution.
+step. It applies when a routine suits the CPU better than the GPU, the
+host and GPU computations are fully decoupled, and the host outputs are
+needed only later in the step. The host
+routine can then run concurrently with the GPU work. The airfoil polar
+lookups fit this pattern, and Section~\ref{sec:opt-overlap} describes
+how we overlap them with device execution.
 
 
 The instances in Table~\ref{tab:taxonomy} come from LESGO, but the
