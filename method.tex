@@ -25,31 +25,51 @@ kernels that update these arrays are loop nests over $x$, $y$, and $z$
 whose iterations are independent. We therefore parallelize each loop
 nest directly with an OpenACC \texttt{parallel loop} directive and use
 its \texttt{collapse} clause to map the independent loop levels onto GPU
-threads. We replace the FFTW transforms of the CPU build with
-batched cuFFT calls and bind them to the same CUDA stream as the OpenACC
-kernels, so that transforms and loops execute in order without host
-synchronization.
+threads. We replace the FFTW~\cite{FFTW3} transforms of the CPU build
+with batched 2D NVIDIA cuFFT~\cite{cufft} calls and bind them to the 
+same CUDA stream as the OpenACC kernels, so that transforms and loops 
+execute in order without host synchronization.
 
 \vspace{0.08in}
 \textbf{Data.} Offloading the loops decides where computation runs, but
 not where data lives. Because every solver array holds $O(N_xN_yN_z)$ values,
 each unnecessary host--device transfer moves an entire field.
 Directive-based ports commonly adopt one of three
-data strategies. (1)~\emph{Array mirroring} keeps a device copy of every
-host array and returns data to the host wherever host code consumes
-it. (2)~\emph{CUDA managed memory} lets the driver migrate pages between 
-host and device on demand. (3)~\emph{Fine-grained explicit residency}
+data strategies. (1)~\emph{CUDA managed memory} lets the driver migrate
+pages between host and device on demand. (2)~\emph{Array mirroring}
+keeps a device copy of every host array and returns data to the host
+wherever host code consumes it. (3)~\emph{Fine-grained explicit residency}
 lets the developer decide, array by array and access by access, where
-each field resides and which part of it crosses the PCIe bus. The first
+each field resides and which part of it moves between host and device. The first
 two strategies require few code changes, so we begin with them.
 
 \subsection{Data-Movement Bottlenecks}
 \label{sec:method-problem}
 
-We first evaluate array mirroring and CUDA managed memory on LESGO.
+We evaluate CUDA managed memory and array mirroring on LESGO.
+
+% \begin{figure}[h]
+% \centering
+% \includegraphics[width=\linewidth]{figs/fig_managed.pdf}
+% \caption{Per-step time under CUDA managed memory versus explicit residency on the production case (604M cells, 16 A100 GPUs).}
+% \label{fig:managed}
+% \end{figure}
 
 % \vspace{0.08in}
-\textbf{Array Mirroring.} Mirroring works well when the solver state
+\textbf{CUDA Managed Memory.} We first try CUDA managed memory~\cite{caplan2023dc}, 
+which requires the least porting effort. We build LESGO with
+\texttt{-gpu=mem:managed} and run the production benchmark
+(Section~\ref{sec:setup}) on 16 A100 GPUs. For this implementation,
+\texttt{Nsight Systems} profiling shows that page faults and on-demand
+data migration, which are inherent to demand-paged unified
+memory~\cite{chien2019um}, stall execution and yield limited speedup
+over the CPU version.
+
+\vspace{0.08in}
+\textbf{Array Mirroring.} We next evaluate the second strategy, where
+we build LESGO with \texttt{-gpu=mem:separate}, keep a device copy of
+every host array, and synchronize arrays with \texttt{update}
+directives around each host routine. Mirroring works well when the solver state
 fits comfortably in device memory and every kernel moves to the GPU, so
 that data returns to the host only for diagnostics and
 checkpoints~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. LESGO does not fit
@@ -63,32 +83,17 @@ on the host. Mirroring consequently still requires PCIe transfers at
 every step wherever these host-resident routines consume solver state.
 On our reference
 configuration ($256^3$ grid with two wind turbines on 4 A100 GPUs),
-\texttt{Nsight Systems} profiling shows that, of a 220\,ms time step,
+\texttt{nsys} profiling shows that, of a 220\,ms time step,
 53\% goes to host computation and synchronization, 30\% to
 device-to-host transfers, and 12\% to host-to-device transfers. GPU
 execution accounts for only 6\% (13\,ms), which leaves the GPU
 \textbf{94\% idle}. Most of this traffic comes from a full-field
 synchronization of twelve $O(N_xN_yN_z)$ arrays (420\,MB per step), although
-the host routines read only about 5\,MB of it.
+the host routines read only about 5\,MB of it. The remaining data is 
+therefore wasted, because the host needs only a small
+section of each array rather than the whole array.
 
-% \begin{figure}[h]
-% \centering
-% \includegraphics[width=\linewidth]{figs/fig_managed.pdf}
-% \caption{Per-step time under CUDA managed memory versus explicit residency on the production case (604M cells, 16 A100 GPUs).}
-% \label{fig:managed}
-% \end{figure}
-
-\vspace{0.08in}
-\textbf{CUDA Managed Memory.} Managed memory requires the least porting
-effort and underpins Fortran standard-parallelism
-offloading~\cite{caplan2023dc}. We build LESGO with
-\texttt{-gpu=mem:managed} and run the production benchmark
-(Section~\ref{sec:setup}) on 16 A100 GPUs. \texttt{nsys} profiling shows
-that page faults and on-demand data migration, which are inherent to
-demand-paged unified memory~\cite{chien2019um}, stall execution and
-yield limited acceleration.
-
-Both profiles point to the same root cause. After the compute kernels
+Both two strategies point to the same root cause. After the compute kernels
 move to the GPU, certain routines still execute on the host and demand
 full-field data transfers. Achieving high GPU efficiency therefore
 requires the fine-grained control over data residency
@@ -99,7 +104,7 @@ and host--device transfer footprints, which we develop next.
 
 \begin{table*}[t]
 \centering
-\caption{Taxonomy of host--device coupling points in LESGO and the data-residency strategies that resolve each class. 
+\caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the consumer runs and which data moves between host and device.
 % Naive costs are measured per step on the reference configuration [R] or the production case
 % [P].
 }
@@ -167,9 +172,10 @@ Table~\ref{tab:taxonomy}. For each class, the table gives its concrete
 instance in LESGO, the transfer cost that a naive port pays per step, and
 the treatment we apply.
 
-Working through the nine classes, we found that four data strategies
-suffice to resolve them: \emph{gate}, \emph{relocate},
-\emph{slice}, and \emph{overlap}. Each exploits a different property of
+Working through the nine classes, we found that four data strategies,
+\emph{gate}, \emph{relocate}, \emph{slice}, and \emph{overlap}, suffice
+to decide where and when each consumer runs and which data moves between
+host and device. Each exploits a different property of
 the coupling point, and we consider them in this order, moving to the
 next only when the previous one does not apply.
 
