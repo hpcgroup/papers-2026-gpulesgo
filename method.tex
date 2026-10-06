@@ -5,19 +5,21 @@ data movement.
 \subsection{Porting Approach}
 \label{sec:method-approach}
 
-We port LESGO with OpenACC directives and the NVHPC compiler. We choose
-compiler directives over a low-level CUDA rewrite because LESGO is an
-extensive, physics-validated codebase that its user community actively
-extends in Fortran. Directive-based offloading preserves a single source
-tree, in which the CPU build remains reproducible and serves as our
-correctness reference. This choice also follows established practice in
+LESGO contains nearly 300 loop nests, which makes rewriting all of
+them as CUDA Fortran kernels difficult. It is also an extensive,
+physics-validated codebase that its user community actively extends in
+Fortran. Directive-based offloading preserves a single source tree, in
+which the CPU build remains reproducible and serves as our correctness
+reference. This approach also follows established practice in
 atmospheric models~\cite{esclapez2025dales,lapillonne2014,govett2017nim}
 and other production Fortran codebases~\cite{otero2019nek,caplan2019mas}.
+We therefore port LESGO to GPUs with OpenACC directives and the NVHPC
+compiler.
 
 \vspace{0.08in}
 \textbf{Computation.} The structure of LESGO makes compute offloading
 straightforward. The solver state consists of dozens of persistent 3D
-Fortran arrays of $O(N^3)$ size, including velocity components, velocity
+Fortran arrays of $O(N_xN_yN_z)$ size, including velocity components, velocity
 gradients, SGS stresses, and dealiased spectral scratch fields. The
 kernels that update these arrays are loop nests over $x$, $y$, and $z$
 whose iterations are independent. We therefore parallelize each loop
@@ -30,7 +32,7 @@ synchronization.
 
 \vspace{0.08in}
 \textbf{Data.} Offloading the loops decides where computation runs, but
-not where data lives. Because every solver array holds $O(N^3)$ values,
+not where data lives. Because every solver array holds $O(N_xN_yN_z)$ values,
 each unnecessary host--device transfer moves an entire field.
 Directive-based ports commonly adopt one of three
 data strategies. (1)~\emph{Array mirroring} keeps a device copy of every
@@ -52,7 +54,7 @@ fits comfortably in device memory and every kernel moves to the GPU, so
 that data returns to the host only for diagnostics and
 checkpoints~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. LESGO does not fit
 this mold for two reasons. First, its state comprises dozens of
-$O(N^3)$ fields plus $3/2$-padded spectral scratch, so duplicating
+$O(N_xN_yN_z)$ fields plus $3/2$-padded spectral scratch, so duplicating
 arrays that no kernel reads wastes device memory and increases the
 number of GPUs a given grid requires. Second, several routines, such as
 the serial pressure zero-wavenumber recurrence and the airfoil table
@@ -66,7 +68,7 @@ configuration ($256^3$ grid with two wind turbines on 4 A100 GPUs),
 device-to-host transfers, and 12\% to host-to-device transfers. GPU
 execution accounts for only 6\% (13\,ms), which leaves the GPU
 \textbf{94\% idle}. Most of this traffic comes from a full-field
-synchronization of twelve $O(N^3)$ arrays (420\,MB per step), although
+synchronization of twelve $O(N_xN_yN_z)$ arrays (420\,MB per step), although
 the host routines read only about 5\,MB of it.
 
 % \begin{figure}[h]
@@ -231,10 +233,10 @@ Consider the spectral special mode from Table~\ref{tab:taxonomy}
 (Listing~\ref{lst:dc}). As detailed in
 Section~\ref{sec:bg-numerics}, horizontal FFTs reduce the pressure
 Poisson equation to independent tridiagonal systems in $z$ for each
-horizontal Fourier mode, and the GPU solves all $N^2-1$ non-zero modes
+horizontal Fourier mode, and the GPU solves all non-zero modes
 as a single batched system. The zero-wavenumber (DC) mode is singular
 and is instead closed by a first-order vertical recurrence. This
-recurrence is serial in $z$ and involves only $O(N)$ operations, so a
+recurrence is serial in $z$ and involves only $O(N_z)$ operations, so a
 GPU would execute it slower than a single CPU core, and it remains on
 the host. This split matches the slice scenario identified above,
 where the compute-intensive batched solve stays on the GPU, the

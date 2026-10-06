@@ -129,7 +129,7 @@ our porting effort that apply broadly to directive-based GPU codes.
 logic inside a hot kernel forces every thread in a warp to serialize
 along divergent paths, even threads that never take the branch. When
 the exceptional points form a lower-dimensional subset of the iteration
-space, such as $O(N^2)$ boundary cells versus $O(N^3)$ interior cells,
+space, such as $O(N_xN_y)$ boundary cells versus $O(N_xN_yN_z)$ interior cells,
 this penalty is easy to avoid. We use the uniform interior stencil
 over the entire domain in a single branch-free kernel with coalesced
 accesses, then overwrite boundary values with a second, far smaller

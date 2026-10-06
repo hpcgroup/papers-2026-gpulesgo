@@ -102,9 +102,10 @@ from the velocity to make the flow divergence-free.
 \label{sec:bg-impl}
 
 LESGO is implemented in Fortran~90 and parallelized with MPI using a 1D slab 
-decomposition along the vertical ($z$) axis. Each MPI process owns a contiguous 
+decomposition along the vertical ($z$) axis. For a grid with $N_x$, $N_y$,
+and $N_z$ points along $x$, $y$, and $z$, each MPI process owns a contiguous
 block of horizontal $z$-planes spanning the full horizontal domain ($x$-$y$)
-(Fig.~\ref{fig:lesgo-decomposition}a). 
+(Fig.~\ref{fig:lesgo-decomposition}a).
 This topology allows 2D horizontal FFTs to execute entirely within each process,
 completely avoiding expensive 2D domain transposes (\texttt{MPI\_Alltoallv})
 required by 2D pencil decompositions~\cite{romero2022}. Primary physical 
