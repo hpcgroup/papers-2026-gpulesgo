@@ -153,7 +153,7 @@ Together, these components form a fixed per-step cost.
 Nsight Compute profiling demonstrates that the dominant time-consuming
 kernels lie close to the memory-bandwidth roof
 (Fig.~\ref{fig:roofline}). Custom field kernels achieve 67--88\% of peak DRAM
-bandwidth at 24--37\% of peak compute throughput, while batched cuFFT
+bandwidth, while batched cuFFT
 kernels reach 48--82\% of peak memory bandwidth. Together, these two
 families account for 98.5\% of profiled kernel time. 
 The two actuator-line kernels fall below the roof, which we attribute
