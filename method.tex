@@ -34,9 +34,9 @@ coupling point (Section~\ref{sec:method-taxonomy}).
   \renewcommand{\arraystretch}{1.2}
   \rowcolors{2}{gray!12}{white}
   \begin{tabular}{@{}
-    >{\raggedright\arraybackslash}p{0.8in}
-    >{\raggedright\arraybackslash}p{2.35in}
-    >{\raggedright\arraybackslash}p{1.05in}
+    >{\raggedright\arraybackslash}p{0.75in}
+    >{\raggedright\arraybackslash}p{2.5in}
+    >{\raggedright\arraybackslash}p{1.00in}
     >{\raggedright\arraybackslash}p{2.25in}@{}}
   \toprule
   Class & Instance in LESGO & Naive cost per step & Treatment \\
@@ -63,7 +63,7 @@ coupling point (Section~\ref{sec:method-taxonomy}).
   Serial chain & tridiagonal Thomas chains spanning processes &
   host-staged relays & \emph{relocate}, pipelined GPU-aware exchange
   (\S\ref{sec:opt-tridag}) \\
-  Host physics & tabulated airfoil polar lookups & serialized 28\,ms
+  Host physics & tabulated airfoil polar lookups & serialized host time
   & \emph{overlap} with the GPU backlog (\S\ref{sec:opt-overlap}) \\
   \bottomrule
   \end{tabular}
@@ -128,27 +128,28 @@ footprints, which the third strategy provides.
 
 \vspace{0.08in}
 \textbf{Fine-Grained Explicit Residency.} This strategy lets the
-developer decide, array by array and access by access, where each field
-resides and which part of it moves between host and device. In OpenACC,
-we declare every array that GPU kernels access as device-resident at
-module scope (\texttt{!\$acc declare create}), so these arrays remain on
-the device throughout execution. Every GPU kernel asserts data presence
-(\texttt{default(present)}), so no data moves implicitly. Data moves
-only at explicit \emph{coupling points}, where a host routine reads or
-writes solver state. At each coupling point, we apply \texttt{update}
-directives only to the array section that the host routine actually
-accesses. Mirroring, in contrast, allocates a device copy of every array
-and synchronizes full arrays around each host routine.
+developer decide, array by array, where each field resides and which
+part of it moves. We classify the arrays by which side accesses them.
+For arrays that only GPU kernels access, such as the LASD filter scratch
+fields, we keep the data on the device at all times. For arrays that
+only host routines access, we leave them in host memory. 
+For arrays that both sides access, such as the
+velocity and pressure fields, we keep the primary copy on the device and
+move data only at explicit \emph{coupling points}, where a host routine
+reads or writes them. At each coupling point, we use an \texttt{update}
+directive to transfer only the array section that the routine accesses.
+In OpenACC, we make every array that GPU kernels access device-resident
+for the entire run (\texttt{declare create} or \texttt{enter data}), and
+we add \texttt{default(present)} to every kernel, so no data moves
+implicitly.
 
-More importantly, this strategy does not require every kernel to run on
-the GPU. Routines that suit the CPU better can remain on the host, as
-long as they exchange only a small amount of data with the GPU. This
-design has two advantages. First, each routine runs on the processor
-that executes it faster, so the port benefits from both the GPU and the
-CPU. Second, arrays that only host routines use stay in host memory,
-which reduces the device memory footprint and lets a given grid run on
-fewer GPUs than mirroring requires. The coupling points therefore depend
-on where each routine computes, and we turn to this decision next.
+Unlike mirroring, this strategy does not require us to move every
+kernel to the GPU. We can keep routines that suit the CPU better on the
+host, as long as they exchange little data with the GPU. Each routine
+thus runs on the processor that executes it faster, and the host-only
+arrays need no device copy, which lets us run a given grid on fewer
+GPUs. The coupling points therefore depend on where each routine
+computes, and we turn to this decision next.
 
 \subsection{Deciding Where to Compute and What to Move}
 \label{sec:method-taxonomy}

@@ -16,21 +16,25 @@ porting effort.
 
 The spectral Poisson solve (\texttt{PoissonTridiag()} in
 Algorithm~\ref{alg:step}) solves one tridiagonal system along $z$ for
-each horizontal wavenumber pair. Under the slab decomposition, every
-system spans all $P$ processes (Section~\ref{sec:bg-impl}). The Thomas
+each horizontal wavenumber pair. Under the slab decomposition, each
+process holds a contiguous range of $xy$ planes, 
+so every system spans all $P$ processes. The Thomas
 algorithm sweeps each system serially along $z$, so process $k$ idles
 until process $k-1$ finishes its forward elimination, and back
 substitution then returns down the chain in the same way.
 
 To remove this serialization, we exploit the independence of the
-systems. We partition them into $c$ chunks and pipeline the chunks
-through the process chain (Fig.~\ref{fig:tridag})~\cite{povitsky1999,povitsky2000}. 
+systems. Within each process, we partition the local $xy$ planes along
+$y$ into $c$ chunks, so that each chunk holds a subset of
+the systems. Since the chunks are independent, different processes can
+work on different chunks at the same time, so we pipeline the chunks
+through the process chain (Fig.~\ref{fig:tridag})~\cite{povitsky1999,povitsky2000}.
 In the forward pass, process $k$ eliminates
 chunk $m$, sends its boundary coefficients to process $k{+}1$ with
 GPU-aware MPI, and immediately proceeds to chunk $m{+}1$. Process
 $k{+}1$ meanwhile works on chunk $m$, so all processes compute
 concurrently once the pipeline fills.
-Moreover, with chunking, the last process starts back substitution for chunk $m$
+Moreover, the last process starts back substitution for chunk $m$
 as soon as it finishes the forward pass of that chunk, so the backward
 wave of early chunks overlaps the forward wave of later ones.
 Unlike reduced-system libraries that alter the elimination
