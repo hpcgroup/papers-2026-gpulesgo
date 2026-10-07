@@ -107,7 +107,7 @@ a device copy of every host array. We build LESGO with
 directives around each host routine. Mirroring works well when the
 solver state fits comfortably in device memory and every kernel moves
 to the GPU, so that data returns to the host only for diagnostics and
-checkpoints~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. LESGO
+checkpoints. LESGO
 does not fit this mold for two reasons. First, mirroring also
 duplicates arrays that no kernel reads, which wastes device memory and
 increases the number of GPUs a given grid requires. Second, several
@@ -214,11 +214,18 @@ tridiagonal chains.
 
 \vspace{0.08in}
 \textbf{Slice} applies when a routine should stay on the host but
-touches only a small part of a field. For example, the pressure zero-wavenumber
-recurrence remains on the host, yet it
-reads and writes only the DC column of the pressure field, about
-1\,KB out of 34\,MB. We name only this array section in the
-\texttt{update self} and \texttt{update device} directives.
+touches only a small part of a field. We size each transfer by the
+footprint the routine accesses rather than by the full array. Its
+access intent decides the direction, so only the read set moves to the
+host before the routine runs, and only the write set returns to the
+device afterwards. 
+% The rest of the field stays valid on the device,
+% because only device kernels modify it. 
+% For example, the pressure
+% zero-wavenumber recurrence remains on the host, yet it reads and writes
+% only a small subset of the pressure field.
+% We restrict the \texttt{update self} and
+% \texttt{update device} directives to this array section.
 
 \vspace{0.08in}
 \textbf{Overlap} hides host computation that still runs at every
@@ -239,16 +246,14 @@ We next illustrate the slice treatment with an example from the pressure solver.
 caption={Structure-aware partial transfer in the
 pressure solver. A 1D column transfer (bottom) replaces full 3D array
 transfers (top).},label={lst:dc}]
-! mirroring: full arrays around the host loop
-!$acc update self(p, rH_z)          ! 2 x 34 MB
-! serial loop along z on the host
-!$acc update device(p)              ! 34 MB
+! mirroring: 3 full-field transfers / step
+!$acc update self(p, rH_z)       ! 2 x 34 MB
+call dc_column(p, rH_z)
+!$acc update device(p)           ! 34 MB
 
-! slice: only one column crosses PCIe, 1 KB
-!$acc update self(rH_z(1:2,1,:), rbottomw(1:2,1))
-do jz = 2, nz
-  p(1:2,1,jz) = p(1:2,1,jz-1) + rH_z(1:2,1,jz)*dz
-end do
+! slice: O(nz) traffic, 1 KB each way
+!$acc update self(rH_z(1:2,1,:))
+call dc_column(p, rH_z)
 !$acc update device(p(1:2,1,:))
 \end{lstlisting}
 
@@ -256,18 +261,14 @@ end do
 Listing~\ref{lst:dc} shows the slice treatment in the pressure solver.
 Each vertical column of the pressure array \texttt{p} forms an
 independent system along $z$, and the GPU solves all columns in one
-batched call. One column, however, cannot use this solver and is instead
-computed by a serial loop along $z$ (Section~\ref{sec:bg-numerics}).
-Each level of this loop depends on the level below it, and the
-dependency continues across processes, because each process starts from
-the top value of the process below. The loop therefore offers no
-parallelism to the GPU, which would execute it slower than a single CPU
-core, so we keep it on the host. A mirroring port synchronizes the full
-\texttt{p} and \texttt{rH\_z} arrays around this loop, three full-array
-transfers per step. The loop, however, reads only one column of
+batched call. One column, however, cannot use this solver, and we
+compute it separately on the host.
+A mirroring port synchronizes the full
+\texttt{p} and \texttt{rH\_z} arrays around this routine, three full-array
+transfers per step. Yet the routine reads only one column of
 \texttt{rH\_z} and writes only one column of \texttt{p}. We therefore
-name just these columns in the \texttt{update} directives, about
-1\,KB each way. All other operations on \texttt{p}, including its halo
+restrict the \texttt{update} directives to these columns, which
+transfers about 1\,KB in each direction. All other operations on \texttt{p}, including its halo
 exchange with the neighboring process, run on the GPU, so the rest of
 \texttt{p} never leaves the device. As shown in
 Table~\ref{tab:finalmetrics}, profiling confirms that only minimal

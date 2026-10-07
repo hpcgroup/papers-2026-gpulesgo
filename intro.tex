@@ -54,15 +54,15 @@ Pseudo-spectral multiphysics LES has recurring host--device
 device-resident state. They vary widely in how much of the field they
 touch and how often, so no single blanket data-placement policy fits
 them all. The two data strategies common to directive-based ports both
-encounter severe limitations here. (1)~Delegating placement to CUDA
-managed memory lets the driver migrate pages on demand, a route that
-minimizes porting effort and underpins Fortran standard-parallelism
-offloading~\cite{caplan2023dc}, yet it hides traffic from the source
-code and incurs page-migration overheads across a range of GPU
-workloads~\cite{chien2019um}.
-(2)~Array mirroring keeps a device copy of every host array. Fully resident
-ports~\cite{esclapez2025dales,giorgetta2022,xiao2025cales} run all
-physics on the GPU, so full fields return to the host mainly for output.
+encounter severe limitations here. (1)~CUDA managed memory lets the driver
+migrate pages between host and device on demand~\cite{caplan2023dc}.
+This strategy requires the least porting effort, but it hides data
+movement from the source code and incurs page-migration
+overhead~\cite{chien2019um}.
+(2)~Array mirroring keeps a device copy of every host
+array~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. This strategy
+typically moves all computation to the GPU and returns full fields to
+the host mainly for output.
 However, in LESGO we find that some operations suit the CPU better, such as the 
 serial pressure recurrence and the airfoil table lookups, and they read solver
 state every step. Mirroring leaves open how to serve these host routines,

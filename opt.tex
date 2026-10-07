@@ -1,8 +1,6 @@
 This section presents three optimizations that target structural
 bottlenecks of the solver, followed by general practices from our
-porting effort. Unless noted
-otherwise, all performance measurements correspond to the 604M-cell
-production case on 16 NVIDIA A100 GPUs (Section~\ref{sec:setup}).
+porting effort.
 
 \subsection{Chunk Pipelining across Serial Process Chains}
 \label{sec:opt-tridag}
@@ -51,9 +49,10 @@ improve hardware occupancy.
 We demonstrate this strategy with the actuator-line turbine model and the LASD subgrid-scale closure.
 
 For the actuator-line model (\texttt{Turbines()}), a direct port
-loops over the turbines and repeats the device uploads, kernel
-launches, synchronizations, and small collective reductions for each of
-them. Across the farm, this adds up to more than 1,000
+loops over the turbines. Each turbine issues many device uploads,
+kernel launches, and small collective reductions.
+The total count grows with the number of turbines, and a
+large wind farm can even require more than a thousand
 \texttt{MPI\_Allreduce} calls per process at each step. We instead
 treat the whole farm as one batch. The blade-point tables of all
 turbines stay in device memory for the entire run. We then launch one sampling kernel
@@ -95,8 +94,8 @@ computation. We accordingly keep this routine on the host.
     \label{fig:overlap}
 \end{figure}
 
-However, running this routine synchronously on the host would add
-$\sim$28\,ms to every step and leave the GPU idle meanwhile. We avoid
+However, running this routine synchronously on the host would leave
+the GPU idle at every step. We avoid
 this cost by decoupling blade-force evaluation from the GPU
 work. The evaluation reads only the velocities produced at the start of the time
 step, and the solver does not need its outputs until force projection
@@ -107,9 +106,10 @@ actuator-line model into two decoupled phases around convection
 GPU, copies them to the host, and returns without waiting for the
 device queue to drain. The CPU then evaluates blade forces while the GPU
 runs convection. Phase~2 uploads the forces to the device and projects them onto the
-grid. This decoupling removes host computation from the critical path,
-saves $\sim$30\,ms per step, and raises overall GPU utilization to
-\textbf{93\%}. The same approach applies to any host routine whose
+grid. This decoupling overlaps the host computation with device
+kernels and removes it from the critical path of each step, which
+significantly raises GPU utilization.
+The same approach applies to any host routine whose
 inputs are fixed early in the step and whose outputs are needed only
 later.
 

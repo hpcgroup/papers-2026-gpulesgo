@@ -74,8 +74,8 @@ in the nonlinear convective term, LESGO employs
 the standard $3/2$-rule dealiasing scheme. It transforms each velocity
 and vorticity component onto an expanded ($1.5\times$ padded) grid with
 2D horizontal FFTs, forms the nonlinear product there, and transforms
-the product back to the original grid. Convection represents the most 
-FFT-intensive phase of the time step.
+the product back to the original grid. 
+% Convection represents the most FFT-intensive phase of the time step.
 
 \stagelead{stgturb}{Turbines} (lines 11--14). The actuator-line model
 (Section~\ref{sec:bg-physics}) couples the turbines to the flow in three
@@ -172,5 +172,4 @@ large-scale wind-farm studies computationally impractical. This significant
 performance gap motivated our development of the GPU port. This ceiling also 
 reflects inefficiencies in the current CPU implementation. 
 Section~\ref{sec:opt} describes the optimizations we
-propose to address them.
- 
+present to address them.
