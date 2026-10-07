@@ -90,7 +90,7 @@ code changes, so we begin with them.
 % \end{figure}
 
 \vspace{0.08in}
-\textbf{CUDA Managed Memory.} We first tried CUDA managed memory~\cite{caplan2023dc}, which
+\textbf{CUDA Managed Memory.} We first try CUDA managed memory~\cite{caplan2023dc}, which
 lets the driver migrate pages between host and device on demand and
 requires the least porting effort. We build LESGO with
 \texttt{-gpu=mem:managed} and run the production benchmark
@@ -114,7 +114,7 @@ increases the number of GPUs a given grid requires. Second, several
 routines run slower on the GPU than on the CPU. These routines should
 therefore remain on the host.
 Mirroring consequently transfers full fields at every step
-wherever they consume solver state. 
+wherever these host routines access solver state. 
 On our reference configuration ($256^3$ grid with two
 wind turbines on 4 A100 GPUs), profiling shows that the
 GPU computes for only 6\% of each time step, while host--device
@@ -168,7 +168,7 @@ CPU build with batched 2D NVIDIA cuFFT~\cite{cufft} calls and bind them
 to the same CUDA stream as the OpenACC kernels, so that transforms and
 loops execute in order without host synchronization.
 
-However, we found that not every routine fits this pattern. Some
+However, not every routine fits this pattern. Some
 routines carry serial dependencies, such as the pressure
 zero-wavenumber recurrence. Others run better on the CPU, such as the
 tabulated airfoil polar lookups, which involve irregular branching. In
@@ -188,8 +188,8 @@ LESGO into the nine classes listed in Table~\ref{tab:taxonomy}. For
 each class, the table gives its concrete instance in LESGO and the
 transfer cost that a naive port pays per step.
 
-Working through the nine classes, we found that four treatments,
-\emph{gate}, \emph{relocate}, \emph{slice}, and \emph{overlap}, suffice
+Across the nine classes, four treatments
+(\emph{gate}, \emph{relocate}, \emph{slice}, and \emph{overlap}) suffice
 to decide where and when each host routine runs and which data moves between
 host and device. 
 % Each exploits a different property of
@@ -219,7 +219,7 @@ touches only a small part of a field. We size each transfer by the
 footprint the routine accesses rather than by the full array. Its
 access intent decides the direction, so only the read set moves to the
 host before the routine runs, and only the write set returns to the
-device afterwards. 
+device afterward. 
 % The rest of the field stays valid on the device,
 % because only device kernels modify it. 
 % For example, the pressure
@@ -241,7 +241,8 @@ how we overlap them with device execution.
 The instances in Table~\ref{tab:taxonomy} come from LESGO, but the
 same classes appear in other pseudo-spectral multiphysics
 codes, so the table can serve as a porting checklist for similar solvers.
-We next illustrate the slice treatment with an example from the pressure solver.
+We next illustrate the slice treatment with an example from the
+pressure solver (Listing~\ref{lst:dc}).
 
 \begin{lstlisting}[float=h,linewidth=\columnwidth,
 caption={Structure-aware partial transfer in the
@@ -259,7 +260,6 @@ call dc_column(p, rH_z)
 \end{lstlisting}
 
 % \vspace{0.05in}
-Listing~\ref{lst:dc} shows the slice treatment in the pressure solver.
 Each vertical column of the pressure array \texttt{p} has its own
 tridiagonal equations along $z$, and a batched GPU solver handles all
 columns in one call. One column, however, cannot use this

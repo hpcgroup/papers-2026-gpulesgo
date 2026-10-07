@@ -17,14 +17,14 @@ porting effort.
 The spectral Poisson solve (\texttt{PoissonTridiag()} in
 Algorithm~\ref{alg:step}) solves one tridiagonal system along $z$ for
 each horizontal wavenumber pair. Under the slab decomposition, each
-process holds a contiguous range of $xy$ planes, 
+process holds a contiguous range of $x$-$y$ planes, 
 so every system spans all $P$ processes. The Thomas
 algorithm sweeps each system serially along $z$, so process $k$ idles
 until process $k-1$ finishes its forward elimination, and back
 substitution then returns down the chain in the same way.
 
 To remove this serialization, we exploit the independence of the
-systems. Within each process, we partition the local $xy$ planes along
+systems. Within each process, we partition the local $x$-$y$ planes along
 $y$ into $c$ chunks, so that each chunk holds a subset of
 the systems. Since the chunks are independent, different processes can
 work on different chunks at the same time, so we pipeline the chunks

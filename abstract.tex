@@ -9,10 +9,11 @@ production-scale wind-farm simulations. To enable significantly finer resolution
 present the porting of LESGO to GPGPUs. For this class of pseudo-spectral
 multi-physics solvers, recurring host--device data movement rather
 than kernel throughput governs overall performance. We analyze all host--device
-coupling points across the solver and classify them into four treatments. On
+coupling points across the solver, classify them, and address each class
+with one of four treatments. On
 this foundation, we propose several optimizations, including chunk pipelining
 across serial process chains, batching many small work items, and heterogeneous
 CPU--GPU execution.  Evaluation on a 60-turbine wind farm discretized into 604 million cells
 demonstrates a 40$\times$ speedup over the best-performing CPU baseline at
 equal node count, rising to 90$\times$ on 64 GPUs, and strong scaling to
-128 GPUs on a 1.36 billion cell grid.
+128 GPUs on a 1.36-billion-cell grid.

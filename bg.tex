@@ -34,14 +34,14 @@ the lower boundary, an equilibrium log-law stress model~\cite{moeng1984}
 (or optionally an integral wall model~\cite{yang2015iwm}) closes the boundary 
 condition. 
 
-Consequently, FFT-based differentiation, dealiased products, and the spectral 
+Overall, FFT-based differentiation, dealiased products, and the spectral 
 Poisson solve render the computational profile heavily FFT-dominated, 
 in contrast to finite-difference atmospheric codes where FFTs are confined to 
 the pressure solve~\cite{esclapez2025dales,vanheerwaarden2017}.
-Early GPU ports of such FFT-heavy solvers were written in CUDA Fortran,
-including the finite-difference codes CaNS~\cite{costa2021} and
-AFiD~\cite{zhu2018afid}, or custom asynchronous redesigns of 
-pseudo-spectral codes~\cite{ravikumar2019}.
+Early GPU ports of FFT-based solvers either used CUDA Fortran, as in
+the finite-difference codes CaNS~\cite{costa2021} and
+AFiD~\cite{zhu2018afid}, or redesigned a pseudo-spectral code around
+asynchronous execution~\cite{ravikumar2019}.
 CaNS has since moved to OpenACC, with the
 cuDecomp library handling multi-GPU transposes and halo
 exchanges~\cite{romero2022}, and later added a pencil-distributed parallel
@@ -52,8 +52,8 @@ wall-bounded flows.
 \subsection{Dynamic SGS and Actuator-Line Turbine Models}
 \label{sec:bg-physics}
 
-Two physics components dominate both the scientific fidelity and the
-computational complexity of wind-farm LES in LESGO.
+Two physics components dominate the scientific fidelity and the
+computational cost of wind-farm LES in LESGO.
 
 \vspace{0.08in}
 \textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} LESGO closes
@@ -114,6 +114,6 @@ queues to overlap kernel execution, transfers, and library calls,
 with \texttt{wait} clauses ensuring correct data dependency ordering.
 
 Although offloading individual compute loops via OpenACC follows 
-well-established conventions, systematically managing data movement 
-across a complex multiphysics solver remains the dominant performance 
-bottleneck, which we address in Section~\ref{sec:method}.
+well-established conventions, data movement across a complex
+multiphysics solver remains the dominant performance bottleneck.
+Section~\ref{sec:method} describes how we manage it systematically.

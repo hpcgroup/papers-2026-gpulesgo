@@ -51,7 +51,7 @@ optimize them on GPUs.
 
 \stagelead{stgderiv}{Derivatives} (line 4). The convective and SGS terms
 of Eq.~\ref{eq:les} need the velocity gradients, which form the
-vorticity and the strain rate, respectively. On each horizontal $x$-$y$ plane, LESGO computes the
+vorticity and the strain rate, respectively. On each $x$-$y$ plane, LESGO computes the
 horizontal derivatives spectrally with a forward 2D FFT, a
 multiplication by the wavenumbers, and an inverse 2D FFT. Vertical
 derivatives use second-order centered differences between adjacent
@@ -104,7 +104,7 @@ from the velocity to make the flow divergence-free.
 LESGO is implemented in Fortran~90 and parallelized with MPI using a 1D slab 
 decomposition along the vertical ($z$) axis. For a grid with $N_x$, $N_y$,
 and $N_z$ points along $x$, $y$, and $z$, each MPI process owns a contiguous
-block of horizontal $z$-planes spanning the full horizontal domain ($x$-$y$)
+block of horizontal $z$-planes spanning the full horizontal $x$-$y$ domain
 (Fig.~\ref{fig:lesgo-decomposition}a).
 This topology allows 2D horizontal FFTs to execute entirely within each process,
 completely avoiding expensive 2D domain transposes (\texttt{MPI\_Alltoallv})
@@ -163,11 +163,11 @@ wind-farm case, which simulates 60 turbines on a 604M-cell grid
 ($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
 As shown in Figure~\ref{fig:ceiling}, increasing the process count
-from 16 to 64 yields only 1.08$\times$ speedup, and 128 processes
+from 16 to 64 yields only a 1.08$\times$ speedup, and 128 processes
 exhaust the node's memory. Four nodes with 512 processes reach 6.48\,s
 per step, only $1.9\times$ faster than the best single-node run.
 At this scaling ceiling, accumulating converged turbulence statistics
-require hundreds of thousands of time steps. As a result, a single
+requires hundreds of thousands of time steps. As a result, a single
 production run takes several days or even months to complete, making
 large-scale wind-farm studies computationally impractical. This significant
 performance gap motivated our development of the GPU port. This ceiling also 

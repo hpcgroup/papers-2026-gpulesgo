@@ -13,8 +13,8 @@ the long integration times these flows demand.
 
 LESGO~\cite{lesgo-web,bouzeid2005} is a widely used open-source pseudo-spectral
 LES solver for ABL and wind-farm flows.  It has been used for many
-different kinds of simulations~\cite{tseng2006} including wind-farm~\cite{calaf2010,stevens2014precursor,
-stevens2016spacing,shapiro2019fad,narasimhan2022veer,zhu2025jhtdbwind,xiao2025diurnal}, rough-surface~\cite{anderson2010,
+different kinds of simulations, including urban dispersion~\cite{tseng2006}, wind farms~\cite{calaf2010,stevens2014precursor,
+stevens2016spacing,shapiro2019fad,narasimhan2022veer,zhu2025jhtdbwind,xiao2025diurnal}, rough surfaces~\cite{anderson2010,
 anderson2011,anderson2012}, tree canopies~\cite{graham2012}, and wall-bounded turbulence~\cite{porteagel2000,bouzeid2005,
 yang2015iwm,bretheim2015}. 
 % Most recently, it has produced public wind-farm LES databases such as
@@ -50,7 +50,7 @@ LESGO, however, the factor that governs performance is
 not kernel throughput but data movement.
 
 Pseudo-spectral multiphysics LES has recurring host--device
-\emph{coupling points} -- places where host-side code must read or write
+\emph{coupling points}, where host-side code must read or write
 device-resident state. They vary widely in how much of the field they
 touch and how often, so no single blanket data-placement policy fits
 them all. The two data strategies common to directive-based ports both
@@ -67,7 +67,7 @@ However, in LESGO we find that some operations suit the CPU better, such as the
 serial pressure recurrence and the airfoil table lookups, and they read solver
 state every step. Mirroring leaves open how to serve these host routines,
 and each full-field transfer stalls the GPU. Mirroring every
-array also consumes device memory, so that LESGO needs more GPUs for the
+array also consumes device memory, therefore LESGO needs more GPUs for the
 same problem size.
 Thus, achieving high performance for LESGO requires a fine-grained data
 residency strategy tailored to its host--device coupling points.
@@ -77,7 +77,7 @@ to GPGPUs. The port preserves the solver's validated physics and brings
 production-scale wind-farm LES within practical reach. We begin by measuring
 two placement strategies on LESGO, CUDA managed memory and
 array mirroring, and trace the bottleneck in both to host--device
-coupling points. Guided by this analysis, we analyze all coupling points across the solver,
+coupling points. Guided by this analysis, we examine all coupling points across the solver,
 classify them by host read footprints, and apply four treatments: 
 \emph{gate} skips a transfer whenever its
 conditional or infrequent host routine does not execute; \emph{relocate} ports
@@ -114,5 +114,5 @@ backlog.
 \item We evaluate the GPU version at production scale on a 604M-cell, 60-turbine 
 wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline at
 equal node count and up to 90$\times$ on 64 GPUs.
-We also demonstrate scaling up to 128 GPUs on a 1.36 billion-cell grid. 
+We also demonstrate scaling up to 128 GPUs on a 1.36-billion-cell grid. 
 \end{itemize}

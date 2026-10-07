@@ -1,15 +1,14 @@
 We presented the first GPU port of LESGO, a pseudo-spectral wind-farm
 large-eddy simulation solver comprising nearly 70{,}000 lines of
-Fortran code. We demonstrated that porting such a legacy codebase 
-requires a fine-grained data-management strategy. Therefore, we 
-identified four data-management operations, 
-and classified every host--device coupling point in LESGO
-into these solutions. In addition, we demonstrated three
+Fortran code. We demonstrated that porting such a legacy codebase
+requires a fine-grained data-management strategy. We classified every
+host--device coupling point in LESGO and identified four treatments
+that cover all of them. In addition, we demonstrated three
 optimizations, including chunk pipelining across serial process chains,
-batching many small work items, and CPU--GPU heterogeneous overlap,
-raising overall GPU utilization to 93\%. We believe these
+batching many small work items, and CPU--GPU heterogeneous overlap.
+We believe these
 optimizations extend beyond LESGO to broader multiphysics solvers. 
 On a production-scale benchmark, our GPU implementation delivers a
-40$\times$ to 90$\times$ speedup over the CPU only version. 
+40$\times$ to 90$\times$ speedup over the CPU-only version. 
 We expect this to shorten a full production campaign of a 
 60-turbine wind farm from months to days.

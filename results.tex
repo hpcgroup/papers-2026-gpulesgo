@@ -51,12 +51,12 @@ kernels and one packed reduction (\S\ref{sec:opt-batch}) removes the
 per-instance launch overhead for another $1.6\times$, and hiding the
 residual host physics behind the device backlog
 (\S\ref{sec:opt-overlap}) contributes the final $1.2\times$. Each
-treatment resolves a distinct bottleneck class.
+optimization removes a distinct bottleneck.
 The fully optimized GPU solver achieves 0.162\,s per time step (0.27\,ms
 per million cells), representing a $40\times$ speedup over the fastest
 CPU configuration. Production runs update the LASD coefficient every fifth 
-step (\S\ref{sec:opt-batch}), so that cost is not part of the 0.162\,s
-progression. The bottom rows of the table compare CPU and GPU under
+step (\S\ref{sec:opt-batch}), so the 0.162\,s progression excludes
+this cost. The bottom rows of the table compare CPU and GPU under
 the same cadence. These results demonstrate that our fine-grained data management
 methodology and the component optimizations are individually
 effective and complementary.
@@ -85,7 +85,7 @@ effective and complementary.
 
 Table~\ref{tab:finalmetrics} profiles execution metrics for the final
 build. The GPU remains active for 93\% of
-total time step duration, memory transfer volumes confirm zero $O(N_xN_yN_z)$
+each time step, memory transfer volumes confirm zero $O(N_xN_yN_z)$
 PCIe data movement during steady-state time marching, and dominant
 kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:roofline}).
 
@@ -135,7 +135,7 @@ while the pressure solver scales superlinearly up to 32 GPUs, likely
 because thinner slabs deepen the tridiagonal pipeline
 (Section~\ref{sec:opt-tridag}) and its kernels run more
 efficiently on the smaller subdomain. The \texttt{Other}
-stage holds a fixed cost of about 30\,ms per step. Its main
+stage costs about 30\,ms per step at every scale. Its main
 component is the host-side stage of the turbine coupling, whose cost
 depends on the turbine count and the blade discretization rather than
 on the grid size. The stage also includes collectives and kernel launch
@@ -159,8 +159,7 @@ kernels reach 48--82\% of peak memory bandwidth. Together, these two
 families account for 98.5\% of profiled kernel time. 
 The two actuator-line kernels fall below the roof, which we attribute
 to irregular gather and scatter at off-grid blade points. They take
-only 1.5\% of kernel time, so their effect on overall performance is
-negligible.
+only 1.5\% of kernel time, so their overall effect is negligible.
 
 \begin{figure}[h]
 \centering
@@ -174,13 +173,13 @@ Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
 a fixed grid size and the domain grows vertically with process count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
-64 GPUs). The other two problem sizes exhibit similarly strong weak-scaling
-behavior. 
+64 GPUs). The other two problem sizes exhibit similarly high weak-scaling
+efficiency. 
 % This confirms that scaling efficiency is maintained as long as
 % each GPU carries a sufficiently large workload, which is the regime
 % that production runs occupy. 
 These results demonstrate the effectiveness
-of optimizations presented in Section~\ref{sec:method} and ~\ref{sec:opt}.
+of the optimizations presented in Sections~\ref{sec:method} and~\ref{sec:opt}.
 
 % \subsection{Portability and capacity}
 % \label{sec:results-portability}
