@@ -162,14 +162,14 @@ Figure~\ref{fig:ceiling} evaluates the strong scaling of the production
 wind-farm case, which simulates 60 turbines on a 604M-cell grid
 ($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
-As shown in Figure~\ref{fig:ceiling}, increasing cores from
-16 to 64 results in only 1.08$\times$ speedup, while 128 processes exhaust the node's memory. 
-Four nodes at 512 processes plateau at 6.48\,s per step, only $2.1\times$ faster than a single node. 
+As shown in Figure~\ref{fig:ceiling}, increasing the process count
+from 16 to 64 yields only 1.08$\times$ speedup, and 128 processes
+exhaust the node's memory. Four nodes with 512 processes reach 6.48\,s
+per step, only $1.9\times$ faster than the best single-node run.
 At this scaling ceiling, accumulating converged turbulence statistics
 require hundreds of thousands of time steps. As a result, a single
 production run takes several days or even months to complete, making
 large-scale wind-farm studies computationally impractical. This significant
 performance gap motivated our development of the GPU port. This ceiling also 
 reflects inefficiencies in the current CPU implementation. 
-Section~\ref{sec:opt} describes the optimizations we
-present to address them.
+Section~\ref{sec:opt} describes how we address them.

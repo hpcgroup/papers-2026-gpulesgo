@@ -9,7 +9,7 @@ scaling behavior.
 \centering
 \caption{Cumulative speedup of optimizations on 4 GPU nodes, 16 A100 GPUs for the
 production benchmark (604M cells, 60 turbines) against the fastest
-CPU baseline (4 CPU nodes Fig.~\ref{fig:ceiling}).}
+CPU baseline (4 CPU nodes, Fig.~\ref{fig:ceiling}).}
 \label{tab:progression}
 \footnotesize
 \begin{tabular}{@{}lrr@{}}
@@ -119,7 +119,7 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-    \caption{Decomposition of GPU LESGO runtime for the strong scaling cases.}
+    \caption{Breakdown of GPU LESGO runtime for the strong scaling cases.}
     % \texttt{Other} includes the velocity projection and the routines elided
     % in Algorithm~\ref{alg:step}.}
     \label{fig:stagescale}
@@ -146,7 +146,7 @@ Together, these components form a fixed per-step cost.
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
-\caption{Roofline of the production-step kernel on Perlmutter.}
+\caption{Roofline of the production-step kernels on Perlmutter.}
 \label{fig:roofline}
 \vspace{-0.05in}
 \end{figure}
