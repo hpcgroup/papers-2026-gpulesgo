@@ -79,6 +79,7 @@ effective and complementary.
     DRAM bandwidth of dominant kernels & 67--88\% of peak \\
     \bottomrule
     \end{tabular}
+    \vspace{-0.05in}
 \end{table}
 
 
@@ -126,14 +127,14 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 \end{figure}
 
 We decompose runtime on the 604M-cell grid into individual solver
-stages from Algorithm~\ref{alg:step}, as shown in Fig.~\ref{fig:stagescale}. 
+stages, as shown in Fig.~\ref{fig:stagescale}. 
 From 16 to 64 GPUs, the derivative stage falls from 25\,ms to 8\,ms,
 the SGS stage from 35\,ms to 11\,ms, and the turbine stage from 8\,ms
 to 2\,ms, 
 while the pressure solver scales superlinearly up to 32 GPUs, likely
 because thinner slabs deepen the tridiagonal pipeline
 (Section~\ref{sec:opt-tridag}) and its kernels run more
-efficiently on the smaller per-GPU subdomain. The \texttt{Other}
+efficiently on the smaller subdomain. The \texttt{Other}
 stage holds a fixed cost of about 30\,ms per step. Its main
 component is the host-side stage of the turbine coupling, whose cost
 depends on the turbine count and the blade discretization rather than
@@ -166,7 +167,7 @@ negligible.
 \includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
 \caption{Weak scaling at three per-GPU loads on Perlmutter.}
 \label{fig:weakscaling}
-\vspace{-0.05in}
+\vspace{-0.1in}
 \end{figure}
 
 Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains

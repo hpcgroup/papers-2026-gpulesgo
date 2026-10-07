@@ -56,11 +56,12 @@ Two physics components dominate both the scientific fidelity and the
 computational complexity of wind-farm LES in LESGO.
 
 \vspace{0.08in}
-\textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} An eddy
-viscosity closes the SGS stress in Eq.~\ref{eq:les}. The model computes
-its coefficient dynamically~\cite{germano1991}, averages it along
-fluid-particle trajectories~\cite{meneveau1996}, and recovers scale
-dependence through a second test filter~\cite{porteagel2000,bouzeid2005}. 
+\textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} LESGO closes
+the SGS stress in Eq.~\ref{eq:les} with an eddy-viscosity model whose
+coefficient is computed dynamically from the resolved
+flow~\cite{germano1991}, averaged along fluid-particle
+trajectories~\cite{meneveau1996}, and made scale dependent through a
+second test filter~\cite{porteagel2000,bouzeid2005}.
 % Each coefficient update applies two spectral test filters to 21 velocity
 % and tensor fields (requiring batched 2-D FFTs across all vertical levels) and
 % advects four accumulator fields along particle back-trajectories via
@@ -70,8 +71,7 @@ heterogeneous ABL flows, this model relies on an irregular memory access
 pattern that intertwines filtering, history tracking, and interpolation.
 Consequently, mapping this formulation to GPUs presents distinct
 challenges compared to conventional local closures that rely
-primarily on stencil operations~\cite{esclapez2025dales}, and it
-has no counterpart in prior directive-based LES ports.
+primarily on stencil operations~\cite{esclapez2025dales}.
 
 \vspace{0.08in}
 \textbf{Actuator-line turbine model (ATM).} Each turbine blade is

@@ -70,7 +70,7 @@ and each full-field transfer stalls the GPU. Mirroring every
 array also consumes device memory, so that LESGO needs more GPUs for the
 same problem size.
 Thus, achieving high performance for LESGO requires a fine-grained data
-residency strategy tailored to its distinct host--device coupling points.
+residency strategy tailored to its host--device coupling points.
 
 In this paper, we present our approach to porting the Fortran solver in LESGO
 to GPGPUs. The port preserves the solver's validated physics and brings

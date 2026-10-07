@@ -20,12 +20,12 @@ so the placement of computation determines which data must move between
 host and device. In this section, we first compare data placement
 strategies (Section~\ref{sec:method-placement}). We then decide where
 each routine computes and which data moves at each host--device
-coupling point (Section~\ref{sec:method-taxonomy}).
+coupling point.
 
 
 \begin{table*}[t]
   \centering
-  \caption{Taxonomy of host--device coupling points in LESGO. For each class, the treatment decides where and when the host routine at the coupling point runs and which data moves between host and device.
+  \caption{Taxonomy and treatments of host--device coupling points in LESGO.
   % Naive costs are measured per step on the reference configuration [R] or the production case
   % [P].
   }

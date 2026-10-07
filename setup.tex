@@ -32,6 +32,7 @@ the GPU count.
 We report GPU speedup against the fastest CPU configuration.
 
 \begin{table}[h]
+\vspace{-0.1in}
 \centering
 \caption{Problem sizes of the scaling experiments. Strong scaling keeps
 the grid fixed; weak scaling keeps the per-GPU grid fixed.}
@@ -53,6 +54,7 @@ $512\times512\times40$  & 42M--671M   & 10.5M & 4, 8, 16, 32, 64 \\
 $256\times256\times64$  & 16.8M--268M & 4.2M  & 4, 16, 64 \\
 \bottomrule
 \end{tabular}
+\vspace{-0.05in}
 \end{table}
 
 \textbf{CPU--GPU backend consistency.}
@@ -76,6 +78,7 @@ to roundoff over the first several steps, and their time-averaged statistics
 agree within sampling uncertainty.
 
 \begin{figure}[h]
+    \vspace{-0.05in}
     \centering
     \includegraphics[width=1\columnwidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
     \caption{Hub-height centerline profiles of $u/U_\infty$ from the CPU

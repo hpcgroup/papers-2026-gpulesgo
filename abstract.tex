@@ -1,8 +1,8 @@
 Large-eddy simulation (LES) is the de facto standard for wind-farm aerodynamics
 because it directly resolves energy-carrying turbulence in the atmospheric
 boundary layer rather than modeling it. LESGO is a widely used open-source
-solver for this regime built on pseudo-spectral methods, which add negligible
-numerical dissipation and deliver high accuracy per grid point. LESGO's CPU
+solver for this regime built on pseudo-spectral methods, which deliver
+high accuracy per grid point. LESGO's CPU
 implementation, however, suffers from poor parallel scalability, severely
 constraining the grid resolution and physical integration times of
 production-scale wind-farm simulations. To enable significantly finer resolutions and longer time scales, we
