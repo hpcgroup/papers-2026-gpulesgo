@@ -70,7 +70,7 @@ coupling point (Section~\ref{sec:method-taxonomy}).
   \vspace{-0.1in}
   \end{table*}
 
-\subsection{Data Placement}
+\subsection{Choices of Data Placement}
 \label{sec:method-placement}
 
 The solver state of LESGO consists of dozens of persistent 3D Fortran
@@ -172,7 +172,7 @@ routines carry serial dependencies, such as the pressure
 zero-wavenumber recurrence. Others run better on the CPU, such as the
 tabulated airfoil polar lookups, which involve irregular branching. In
 addition, checkpoint writes require host I/O. We move a routine to the
-GPU when it still exposes enough parallelism, restructuring it
+GPU if it still exposes enough parallelism, restructuring it
 if necessary (Section~\ref{sec:opt}). Otherwise, we keep it on the
 host. Every routine that stays on the host reads or writes solver
 state at the coupling point, so the placement of computation also
@@ -259,9 +259,10 @@ call dc_column(p, rH_z)
 
 % \vspace{0.05in}
 Listing~\ref{lst:dc} shows the slice treatment in the pressure solver.
-Each vertical column of the pressure array \texttt{p} forms an
-independent system along $z$, and the GPU solves all columns in one
-batched call. One column, however, cannot use this solver, and we
+Each vertical column of the pressure array \texttt{p} has its own
+tridiagonal equations along $z$, and a batched GPU solver handles all
+columns in one call. One column, however, cannot use this
+solver, and we
 compute it separately on the host.
 A mirroring port synchronizes the full
 \texttt{p} and \texttt{rH\_z} arrays around this routine, three full-array

@@ -48,8 +48,9 @@ units into fewer, larger device operations to amortize that overhead and
 improve hardware occupancy.
 We demonstrate this strategy with the actuator-line turbine model and the LASD subgrid-scale closure.
 
-For the actuator-line model (\texttt{Turbines()}), a direct port
-loops over the turbines. Each turbine issues many device uploads,
+For the actuator-line model (lines 11--14 in Algorithm~\ref{alg:step}), 
+a naive port keeps the per-turbine loop of the CPU version. 
+Each turbine issues many device uploads,
 kernel launches, and small collective reductions.
 The total count grows with the number of turbines, and a
 large wind farm can even require more than a thousand
@@ -63,10 +64,11 @@ collective calls per step by an order of magnitude and remove all
 per-turbine device allocations.
 
 The Lagrangian scale-dependent (LASD) subgrid-scale model (\texttt{UpdateLASDCoefficient()} in
-Algorithm~\ref{alg:step}) has the same problem. Each coefficient update
-filters 21 3D velocity and tensor fields at two test-filter scales. For
+Algorithm~\ref{alg:step}) has the same problem. At each coefficient
+update, the model filters 21 3D velocity and tensor fields at two
+test-filter scales. For
 each horizontal plane, the filter applies a forward 2D FFT, damps
-selected wavenumbers, and applies an inverse 2D FFT. A direct port
+selected wavenumbers, and applies an inverse 2D FFT. A naive port
 therefore launches thousands of single-plane FFTs per update, and none
 of them is large enough to fill the GPU. We instead promote the 2D
 scratch planes to 3D arrays, so that one batched cuFFT call filters all
