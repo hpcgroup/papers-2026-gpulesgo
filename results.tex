@@ -168,11 +168,10 @@ configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 Figure~\ref{fig:scaling} presents strong scaling for the 60-turbine wind
 farm across vertical grid resolutions of 512, 768, and 1152 levels. All
 three problem sizes show robust strong scaling, and the 1.36B-cell
-grid scales out to 128 GPUs. On the production 604M-cell grid, 32 GPUs
-run each step $1.7\times$ faster than 16 GPUs, and 64 GPUs run it
-$2.2\times$ faster, at 0.072\,s per step. At this scale, the GPU
-solver runs 90$\times$ faster than the fastest CPU configuration
-(Table~\ref{tab:cumulative}).
+grid scales out to 128 GPUs. On the production 604M-cell grid, 64 GPUs 
+run it $2.2\times$ faster than 16 GPUs, at 0.072\,s per step. At this 
+scale, the GPU solver runs 90$\times$ faster than the fastest CPU 
+configuration (Table~\ref{tab:cumulative}).
 
 \begin{figure}[h]
     \centering
@@ -188,17 +187,18 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 Figure~\ref{fig:stagescale} breaks down the step time on the 604M-cell
 grid by stage. We measure each stage by its kernel time, and
 \texttt{Others} is the rest of the measured step time, including the
-kernels of routines elided in Algorithm~\ref{alg:step}. On 16 GPUs,
-convection is the largest stage (43\% of kernel time). SGS
-(23\%), derivatives (16\%), and the pressure solver (11\%) follow.
+kernels of routines elided in Algorithm~\ref{alg:step}. 
+% On 16 GPUs, convection is the largest stage (43\% of kernel time). SGS
+% (23\%), derivatives (16\%), and the pressure solver (11\%) follow.
 From 16 to 64 GPUs, the kernel time of every stage drops by
 3.2--4.0$\times$, close to the ideal. From 16 to 32 GPUs,
 \texttt{Others} stays at about 18\,ms, which reflects a fixed per-step
 cost of kernel launches and the collectives of the adaptive time step, 
 whose cost depends on the turbine count and the blade
 discretization rather than on the grid size.
-On 64 GPUs, however, the workload per process becomes too small to hide 
-this host cost, so \texttt{Others} grows to 31\,ms.
+On 64 GPUs, however, \texttt{Others} grows to 31\,ms. We attribute
+this to the small workload per process, which is no longer large
+enough to hide the host cost.
 
 \begin{figure}[h]
 \centering
