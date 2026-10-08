@@ -104,11 +104,12 @@ In contrast, directive-based porting has emerged as the practical
 standard for legacy Fortran codebases~\cite{lapillonne2014,govett2017nim,giorgetta2022,esclapez2025dales,otero2019nek}.
 OpenACC offloads execution by annotating loop nests with directives
 (\texttt{parallel loop}), without altering the underlying source language.
-Directives such as \texttt{create} and \texttt{copyin}/\texttt{copyout} 
-handle explicit allocation and data movement, \texttt{update} synchronizes 
-data on demand, and \texttt{declare create} maintains array residency 
-throughout the program lifetime. Kernels compiled with \texttt{default(present)} 
-enforce that operand arrays are already resident on the device.
+Data clauses such as \texttt{create} and \texttt{copyin}/\texttt{copyout}
+handle explicit allocation and data movement, the \texttt{update}
+directive synchronizes data on demand, and \texttt{declare create}
+maintains array residency throughout the program lifetime. The
+\texttt{default(present)} clause on a compute construct requires that
+its operand arrays already reside on the device.
 Additionally, the \texttt{async} clause maps operations to asynchronous 
 queues to overlap kernel execution, transfers, and library calls, 
 with \texttt{wait} clauses ensuring correct data dependency ordering.

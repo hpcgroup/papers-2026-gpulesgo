@@ -266,8 +266,8 @@ columns in one call. One column, however, cannot use this
 solver, and we
 compute it separately on the host.
 A mirroring port synchronizes the full
-\texttt{p} and \texttt{rH\_z} arrays around this routine, three full-array
-transfers per step. Yet the routine reads only one column of
+\texttt{p} and \texttt{rH\_z} arrays around this routine, which costs three
+full-array transfers per step. Yet the routine reads only one column of
 \texttt{rH\_z} and writes only one column of \texttt{p}. We therefore
 restrict the \texttt{update} directives to these columns, which
 transfers about 1\,KB in each direction. All other operations on \texttt{p}, including its halo

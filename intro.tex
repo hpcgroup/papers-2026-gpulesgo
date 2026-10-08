@@ -83,7 +83,7 @@ classify them by host read footprints, and apply four treatments:
 conditional or infrequent host routine does not execute; \emph{relocate} ports
 the host routine to the GPU and removes the transfer altogether; \emph{slice}
 shrinks a transfer to the subset of the field the host touches; and
-\emph{overlap} hides an irreducible transfer behind concurrent GPU execution.
+\emph{overlap} hides host computation behind concurrent GPU execution.
 Beyond these data-residency treatments, we apply three further optimizations
 to the remaining structural bottlenecks. We pipeline
 independent systems across a serialized process chain to accelerate the pressure

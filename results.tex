@@ -73,10 +73,10 @@ Our GPU version delivers a $39.7\times$ speedup over the CPU version.
     Metric & Value \\
     \midrule
     GPU busy fraction & 93\% \\
-    Sustained DRAM bandwidth & 73\% of peak \\
+    Sustained DRAM bandwidth over kernel time & 78\% of peak \\
     Host-to-device memcpy volume & 1.6\,MB \\
     Device-to-host memcpy volume & 2.0\,MB \\
-    DRAM bandwidth of dominant kernels & 67--88\% of peak \\
+    % DRAM bandwidth of dominant kernels & 67--88\% of peak \\
     \bottomrule
     \end{tabular}
     \vspace{-0.05in}
@@ -121,7 +121,8 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-    \caption{Breakdown of GPU LESGO runtime for the strong scaling cases.}
+    \caption{Breakdown of GPU LESGO step time by stage on the 604M-cell
+    grid. \texttt{Others} is the rest of the measured step time.}
     % \texttt{Other} includes the velocity projection and the routines elided
     % in Algorithm~\ref{alg:step}.}
     \label{fig:stagescale}
@@ -129,40 +130,41 @@ solver runs 90$\times$ faster than the fastest CPU configuration
 \end{figure}
 
 Figure~\ref{fig:stagescale} breaks down the step time on the 604M-cell
-grid by solver stage.
-From 16 to 64 GPUs, the derivative stage falls from 25\,ms to 8\,ms,
-the SGS stage from 35\,ms to 11\,ms, and the turbine stage from 8\,ms
-to 2\,ms, 
-while the pressure solver scales superlinearly up to 32 GPUs, likely
-because thinner slabs deepen the tridiagonal pipeline
-(Section~\ref{sec:opt-tridag}) and its kernels run more
-efficiently on the smaller subdomain. The \texttt{Other}
-stage costs about 30\,ms per step at every scale. Its main
-component is the host-side stage of the turbine coupling, whose cost
-depends on the turbine count and the blade discretization rather than
-on the grid size. This stage also includes kernel launch time and
-collectives, mainly the global reduction that determines the adaptive
-time step size.
-% Together, these components form a fixed per-step cost.
+grid by stage. We measure each stage by its kernel time, and
+\texttt{Others} is the rest of the measured step time, including the
+kernels of routines elided in Algorithm~\ref{alg:step}. On 16 GPUs,
+convection is the largest stage (43\% of kernel time). SGS
+(23\%), derivatives (16\%), and the pressure solver (11\%) follow.
+From 16 to 64 GPUs, the kernel time of every stage drops by
+3.2--4.0$\times$, close to the ideal. From 16 to 32 GPUs,
+\texttt{Others} stays at about 18\,ms, which reflects a fixed per-step
+cost of kernel launches and the collectives of the adaptive time step, 
+whose cost depends on the turbine count and the blade
+discretization rather than on the grid size.
+On 64 GPUs, however, the workload per process becomes too small to hide 
+this host cost, so \texttt{Others} grows to 31\,ms.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
-\caption{Roofline of the production-step kernels on Perlmutter.}
+\caption{Roofline of the LESGO kernels in one production step on an
+A100 GPU (Perlmutter). Colors give the stage in Algorithm~\ref{alg:step},
+and open circles mark cuFFT kernels, which serve several stages.}
 \label{fig:roofline}
 \vspace{-0.05in}
 \end{figure}
 
-Nsight Compute profiling demonstrates that the dominant time-consuming
-kernels lie close to the memory-bandwidth roof
-(Fig.~\ref{fig:roofline}). Custom field kernels achieve 67--88\% of peak DRAM
-bandwidth, while batched cuFFT
-kernels reach 48--82\% of peak memory bandwidth. Together, these two
-families account for 98.5\% of profiled kernel time. 
-The two actuator-line kernels fall below the roof, which we attribute
-to irregular gather and scatter at off-grid blade points and to the
-limited parallelism of the blade-point set. They take
-only 1.5\% of kernel time, so their overall effect is negligible.
+Figure~\ref{fig:roofline} demonstrates the kernels of one production step on
+the roofline. Most kernels line up along the memory roof, and kernels
+that sustain more than 70\% of peak DRAM bandwidth account for 87\% of
+kernel time. 
+cuFFT kernels take 62\% of kernel time and run at 78\% of peak. 
+Aggregated by stage,
+every stage except the turbines sustains 77--81\% of peak. The only
+kernels below the roof are the actuator-line kernels. We attribute this to their irregular access to grid cells around off-grid blade points.
+These kernels take only 0.7\% of kernel time, so their overall effect is
+negligible.
+% They perform many floating-point operations per byte of DRAM traffic, which places them right of the ridge point.
 
 \begin{figure}[h]
 \centering

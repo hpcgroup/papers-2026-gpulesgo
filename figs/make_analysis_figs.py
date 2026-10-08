@@ -4,8 +4,6 @@
 Outputs (vector PDF for LaTeX + PNG previews):
   fig_sol.pdf        -- per-kernel Nsight Compute speed-of-light scatter
                         (compute SOL vs memory SOL, sized by time share)
-  fig_stagescale.pdf -- per-stage step-time breakdown vs GPU count
-                        (strong scaling, 384-level production series)
 
 Data sources:
   fig_sol:        runs/ncu_gpu16_55477553/ncu_details.csv (rank-0 ncu full
@@ -13,8 +11,7 @@ Data sources:
                   When the case tree is not mounted, falls back to the
                   embedded per-kernel table below (same job, aggregated
                   by the CSV branch of this script).
-  fig_stagescale: runs/scal_gpu{16,32,64}nz384_*/run.log stage timers
-                  (last wbase snapshot; extract_timing.sh semantics)
+  fig_stagescale: now produced by make_stagescale.py
 
 Style: PSSG PlotEnvironment defaults via pssg_style.apply(env=True):
 5 x 3 in figures, 10 pt fonts; LaTeX scales each to the column width.
@@ -164,70 +161,3 @@ ax.set_ylabel("memory throughput (% of peak)")
 ax.grid(True)
 fig.tight_layout(pad=0.3)
 save(fig, "fig_sol")
-
-# ----------------------------------------------------------------------------
-# fig_stagescale -- per-stage step time vs GPU count (strong, 384-level)
-# ----------------------------------------------------------------------------
-# Stage timers (s) at the last wbase snapshot of runs/scal_gpu{16,32,64}nz384_*
-# (sampled step 0.155 s vs 0.152 s true average at 16 GPUs, within 2%).
-# Convection reads < 0.3 ms at every scale (its kernels drain inside the
-# pressure stage's first synchronization) and is folded into the caption.
-gpus = [16, 32, 64]
-# Derivatives and SGS enter as one combined value per scale. Their split
-# follows the separate "Derivatives" and "SGS & Stresses" timers of the
-# earlier Nz=400 runs (runs/scal_gpu{16,32,64}nz384_5432711{5,6,7}/run.log),
-# applied as a ratio to the combined value so every bar keeps its total.
-DS_COMBINED = [0.0607, 0.0330, 0.0191]
-DERIV_NZ400 = [0.02373509, 0.01079348, 0.006440276]
-SGS_NZ400 = [0.03306066, 0.01535980, 0.009332211]
-deriv = [c * d / (d + s) for c, d, s in zip(DS_COMBINED, DERIV_NZ400, SGS_NZ400)]
-sgs = [c - d for c, d in zip(DS_COMBINED, deriv)]
-# Projection (ProjectVelocity) is drawn as its own segment; Other holds the
-# remaining routines elided in Algorithm 1.
-PROJECTION = [0.0053, 0.0036, 0.0028]
-OTHER = [0.0304, 0.0290, 0.0309]
-# Colors and hatches follow the PSSG lists in order, series i taking
-# PALETTE1[i] (the palette with black removed) and HATCHES[i], except that
-# Projection and Other swap slots 4 and 5: Other keeps rose (stgother in
-# Algorithm 1) and its direct labels stay legible over "++" rather than "**".
-stages = [
-    ("Pressure",     [0.0570, 0.0235, 0.0172], VERM,   "white", "xxx"),
-    ("Derivatives",  deriv,                    BLUE,   "white", "//"),
-    ("SGS",          sgs,                      GREEN,  "white", "|||"),
-    ("Turbines",     [0.0082, 0.0041, 0.0020], PURPLE, "white", "OO"),
-    ("Projection",   PROJECTION,               ORANGE, "black", "**"),
-    ("Other",        OTHER,                    ROSE,   "black", "++"),
-]
-
-fig, ax = plt.subplots(figsize=ps.FIGSIZE)
-x = range(len(gpus))
-bottom = [0.0] * len(gpus)
-for name, vals, color, tcol, hatch in stages:
-    ms = [v * 1e3 for v in vals]
-    ax.bar(x, ms, 0.55, bottom=bottom, color=color, hatch=hatch,
-           edgecolor="black", linewidth=0, label=name, zorder=3)
-    for i, (b, v) in enumerate(zip(bottom, ms)):
-        if v > 7.5:   # direct-label the large segments
-            ax.annotate(f"{v:.0f}", xy=(i, b + v / 2), ha="center",
-                        va="center", fontsize=11, color=tcol, zorder=4)
-    bottom = [b + v for b, v in zip(bottom, ms)]
-
-for i, b in enumerate(bottom):
-    ax.annotate(f"{b:.0f} ms", xy=(i, b), xytext=(0, 4),
-                textcoords="offset points", ha="center", fontsize=12)
-
-ax.set_xticks(list(x))
-ax.set_xticklabels([str(g) for g in gpus])
-ax.set_xlim(-0.55, 2.6)
-ax.set_ylim(0, 180)
-ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
-ax.set_xlabel("Number of GPUs")
-ax.set_ylabel("Stage time per step (ms)")
-ax.set_title("Runtime breakdown on the 604M-cell case")
-ax.grid(True, axis="y")
-handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles[::-1], labels[::-1], loc="upper right", ncol=2,
-          columnspacing=0.8, handletextpad=0.4, borderaxespad=0.2, handlelength=1.2,
-          labelspacing=0.35)
-fig.tight_layout(pad=0.3)
-save(fig, "fig_stagescale")
