@@ -2,14 +2,14 @@ This section presents three optimizations that target structural
 bottlenecks of the solver, followed by general practices from our
 porting effort.
 
-\subsection{Chunk Pipelining across Serial Process Chains}
+\subsection{Chunk-based Pipelining to Eliminate Serial Dependencies}
 \label{sec:opt-tridag}
 
 \begin{figure}[h]
     \vspace{-0.05in}
 \centering
 \includegraphics[width=\linewidth]{figs/fig4_lesgo_pipeline.pdf}
-\caption{Pipelining the distributed Thomas solve. (a)~Sequential execution leaves processes idle. (b)~Chunking overlaps forward elimination (blue) with boundary transfers and back substitution (orange).}
+\caption{Pipelining the distributed Thomas solve. (a)~Serial dependencies across processes leave processes idle. (b)~Chunking and pipelining overlap forward elimination (blue) with boundary transfers and back substitution (orange).}
 \label{fig:tridag}
     \vspace{-0.05in}
 \end{figure}

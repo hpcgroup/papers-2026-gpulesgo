@@ -98,7 +98,7 @@ the pressure back to physical space. Finally,
 \texttt{ProjectVelocity()} (line 20) subtracts the pressure gradient
 from the velocity to make the flow divergence-free.
 
-\subsection{MPI Slab Decomposition and Scaling Ceiling}
+\subsection{1D Slab Decomposition using MPI and Scaling Ceiling}
 \label{sec:bg-impl}
 
 LESGO is implemented in Fortran~90 and parallelized with MPI using a 1D slab 
@@ -116,7 +116,7 @@ turbulence scalars, are stored as 3D Fortran arrays.
     \vspace{-0.1in}
     \centering
     \includegraphics[width=\columnwidth]{figs/lesgo_domain_communication.pdf}
-    \caption{LESGO's decomposition. (a) The $N_x \times N_y \times N_z$ grid is split along $z$ into $n$ slabs of $N_z/n$ contiguous $x$-$y$ planes. (b) Vertical finite-difference stencils copy each slab's boundary plane into its neighbor's ghost plane.}
+    \caption{LESGO's parallel 1D decomposition into slabs. (a) The $N_x \times N_y \times N_z$ grid is split along $z$ into $n$ slabs of $N_z/n$ contiguous $x$-$y$ planes. Each slab is assigned to one process. (b) Vertical finite-difference stencils copy each slab's boundary plane into its neighbor process' ghost plane.}
     \label{fig:lesgo-decomposition}
     \vspace{-0.1in}
 \end{figure}
@@ -151,8 +151,8 @@ processes each turbine spans for per-turbine force aggregation.
     \vspace{-0.05in}
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
-    \caption{CPU strong scaling of LESGO on the production case (Section~\ref{sec:setup}). 
-    The cross marks 128 processes on a single node, which exceeds node memory.}
+    \caption{Strong scaling of the CPU-only parallel version of LESGO on the production case (Section~\ref{sec:setup}). 
+    The $\times$ is the data point at 128 processes on a single node, where the code runs out of memory.}
     \label{fig:ceiling}
     \vspace{-0.05in}
 \end{figure}

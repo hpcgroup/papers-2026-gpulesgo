@@ -70,7 +70,7 @@ coupling point.
   \vspace{-0.1in}
   \end{table*}
 
-\subsection{Choices of Data Placement}
+\subsection{Choice of Data Placement}
 \label{sec:method-placement}
 
 Each solver stage of LESGO consists of dozens of persistent 3D Fortran
@@ -89,7 +89,7 @@ code changes, so we begin with them.
 % \end{figure}
 
 \vspace{0.08in}
-\textbf{CUDA Managed Memory.} We first try CUDA managed memory~\cite{caplan2023dc}, which
+\noindent\textbf{CUDA Managed Memory.} We first try CUDA managed memory~\cite{caplan2023dc}, which
 lets the driver migrate pages between host and device on demand and
 requires the least porting effort. We build LESGO with
 \texttt{-gpu=mem:managed} and run the production benchmark
@@ -100,7 +100,7 @@ memory~\cite{chien2019um}, stall execution and yield limited speedup
 over the CPU version.
 
 \vspace{0.08in}
-\textbf{Array Mirroring.} Next, we evaluate array mirroring, which keeps
+\noindent\textbf{Array Mirroring.} Next, we evaluate array mirroring, which keeps
 a device copy of host array. We build LESGO with
 \texttt{-gpu=mem:separate} and synchronize arrays with \texttt{update}
 directives around each host routine. This strategy works well when the
@@ -126,7 +126,7 @@ fine-grained control over data residency and host--device transfer
 footprints, which the third strategy provides.
 
 \vspace{0.08in}
-\textbf{Fine-Grained Explicit Residency.} This strategy lets the
+\noindent\textbf{Fine-grained Explicit Residency.} This strategy lets the
 developer decide, array by array, where each field resides and which
 part of it moves. Unlike mirroring, this strategy does not require us to move every
 kernel to the GPU. We can keep routines that suit the CPU better on the
@@ -148,7 +148,7 @@ for the entire run (\texttt{declare create} or \texttt{enter data}), and
 we add \texttt{default(present)} to every kernel, so no data moves
 implicitly.
 
-\subsection{Deciding Where to Compute and What to Move}
+\subsection{Choice of Computation Offload and Data Movement}
 \label{sec:method-taxonomy}
 
 We first describe how we offload computation and decide which routines remain on
@@ -194,7 +194,7 @@ host and device.
 % next only when the previous one does not apply.
 
 \vspace{0.08in}
-\textbf{Gate} handles host routines that run only under a model option or
+\noindent\textbf{Gate} handles host routines that run only under a model option or
 on a subset of steps. For example, only the CPU fallback of the SGS
 model reads the velocity gradients, yet a naive port copies all
 gradient fields to the host at every step, even when the selected SGS
@@ -203,13 +203,13 @@ controls the host routine, so the transfer disappears whenever the
 routine does not run.
 
 \vspace{0.08in}
-\textbf{Relocate} exploits parallelism in the host routine. If the
+\noindent\textbf{Relocate} exploits parallelism in the host routine. If the
 routine parallelizes well, we port it to the GPU so it can read
 device-resident data in place, such as the diagnostic reductions
 and the distributed tridiagonal chains. 
 
 \vspace{0.08in}
-\textbf{Slice} applies when a routine should stay on the host but
+\noindent\textbf{Slice} applies when a routine should stay on the host but
 touches only a small part of a field. We size each transfer by the
 footprint the routine accesses rather than by the full array. Its
 access intent decides the direction, so only the read set moves to the
@@ -224,7 +224,7 @@ device afterward.
 % \texttt{update device} directives to this array section.
 
 \vspace{0.08in}
-\textbf{Overlap} hides host computation that still runs at every
+\noindent\textbf{Overlap} hides host computation that still runs at every
 step. It applies when a routine suits the CPU better than the GPU, the
 host and GPU computations are fully decoupled, and the host outputs are
 needed only later in the step. The host

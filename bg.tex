@@ -49,14 +49,14 @@ tridiagonal solver for the pressure Poisson equation~\cite{diezsanhueza2025}.
 CaLES~\cite{xiao2025cales} extends the OpenACC version of CaNS to LES of
 wall-bounded flows. 
 
-\subsection{Dynamic SGS and Actuator-Line Turbine Models}
+\subsection{Dynamic SGS and Actuator-line Turbine Models}
 \label{sec:bg-physics}
 
 Two physics components dominate the scientific fidelity and the
 computational cost of wind-farm LES in LESGO.
 
 \vspace{0.08in}
-\textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} LESGO closes
+\noindent\textbf{Scale-dependent Lagrangian dynamic SGS (LASD).} LESGO closes
 the SGS stress in Eq.~\ref{eq:les} with an eddy-viscosity model whose
 coefficient is computed dynamically from the resolved
 flow~\cite{germano1991}, averaged along fluid-particle
@@ -74,7 +74,7 @@ challenges compared to conventional local closures that rely
 primarily on stencil operations~\cite{esclapez2025dales}.
 
 \vspace{0.08in}
-\textbf{Actuator-line turbine model (ATM).} Each turbine blade is
+\noindent\textbf{Actuator-line turbine model (ATM).} Each turbine blade is
 represented by discrete actuator points that sample the local LES
 velocity via trilinear interpolation, look up tabulated airfoil
 aerodynamic polars, and project the resulting forces back onto the grid
