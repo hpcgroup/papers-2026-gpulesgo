@@ -38,28 +38,28 @@ Explicit residency (\S\ref{sec:method-taxonomy})
 
 Table~\ref{tab:progression} summarizes solver progression on the
 production benchmark, with each optimization phase corresponding to
-its respective section. First, our fine-grained data management 
-strategy enables a per-step runtime of 1.32\,s, already $4.9\times$ 
-faster than the fastest CPU configuration. 
+its respective section. First, fine-grained data management strategy
+brings the step time down to 1.32\,s, already $4.9\times$ faster than
+the fastest CPU configuration.
 Then, relocating the actuator-line coupling onto the device
 (\S\ref{sec:method-taxonomy}) removes the last recurring full-field PCIe
 crossings and shortens the step by $2.3\times$. Pipelining the
 distributed tridiagonal solve (\S\ref{sec:opt-tridag}) converts the
 serialized process chain of the pressure solver into overlapped chunk
-waves for a further $1.9\times$. Batching the 60 turbines into single
-kernels and one packed reduction (\S\ref{sec:opt-batch}) removes the
-per-instance launch overhead for another $1.6\times$, and hiding the
-residual host physics behind the device backlog
-(\S\ref{sec:opt-overlap}) contributes the final $1.2\times$. Each
+waves for a further $1.9\times$. Batching many small work items into a few
+kernels and packed reductions (\S\ref{sec:opt-batch}) cuts the
+launch and collective overhead for another $1.6\times$. Finally,
+overlapping host computation with device kernels
+(\S\ref{sec:opt-overlap}) contributes $1.2\times$ speedup. Each
 optimization removes a distinct bottleneck.
 The fully optimized GPU solver achieves 0.162\,s per time step (0.27\,ms
 per million cells), representing a $40\times$ speedup over the fastest
-CPU configuration. Production runs update the LASD coefficient every fifth 
-step (\S\ref{sec:opt-batch}), so the 0.162\,s progression excludes
-this cost. The bottom rows of the table compare CPU and GPU under
-the same cadence. These results demonstrate that our fine-grained data management
-methodology and the component optimizations are individually
-effective and complementary.
+CPU configuration. 
+% Production runs update the LASD coefficient every fifth step 
+% (\S\ref{sec:opt-batch}), so the 0.162\,s progression excludes this cost. 
+We also compare the performance with the LASD model enabled (bottom
+rows of Table~\ref{tab:progression}). 
+Our GPU version delivers a $39.7\times$ speedup over the CPU version. 
 
 
 \begin{table}[h]
@@ -83,19 +83,21 @@ effective and complementary.
 \end{table}
 
 
-Table~\ref{tab:finalmetrics} profiles execution metrics for the final
-build. The GPU remains active for 93\% of
-each time step, memory transfer volumes confirm zero $O(N_xN_yN_z)$
-PCIe data movement during steady-state time marching, and dominant
-kernels operate near peak DRAM bandwidth (Fig.~\ref{fig:roofline}).
+Table~\ref{tab:finalmetrics} reports the execution profile of the
+final build. The GPU stays busy for 93\% of each time step.
+Host--device data transfer per step is minimal, which demonstrates the
+effectiveness of our fine-grained data residency strategy. The dominant
+kernels also run close to peak DRAM bandwidth
+(Fig.~\ref{fig:roofline}). These results show that the residency strategy 
+and kernel optimizations are effective and complement each other.
 
 
 \subsection{Strong and Weak Scaling}
 \label{sec:results-scaling}
 
-We evaluate strong scaling across three problem sizes, analyze stage-by-stage
-execution and kernel efficiency, and examine weak scaling on the
-reference setup.
+% We evaluate strong scaling across three problem sizes, analyze stage-by-stage
+% execution and kernel efficiency, and examine weak scaling on the
+% reference setup.
 
 \begin{figure}[h]
 \centering
@@ -110,9 +112,9 @@ configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 Figure~\ref{fig:scaling} presents strong scaling for the 60-turbine wind
 farm across vertical grid resolutions of 512, 768, and 1152 levels. All
 three problem sizes show robust strong scaling, and the 1.36B-cell
-grid scales out to 128 GPUs. On the production 604M-cell grid, doubling
-from 16 to 32 GPUs speeds up each step by 1.7$\times$, and 64 GPUs raise
-the gain to 2.2$\times$ at 0.072\,s per step. At this scale, the GPU
+grid scales out to 128 GPUs. On the production 604M-cell grid, 32 GPUs
+run each step $1.7\times$ faster than 16 GPUs, and 64 GPUs run it
+$2.2\times$ faster, at 0.072\,s per step. At this scale, the GPU
 solver runs 90$\times$ faster than the fastest CPU configuration
 (Table~\ref{tab:progression}).
 
@@ -126,8 +128,8 @@ solver runs 90$\times$ faster than the fastest CPU configuration
     \vspace{-0.05in}
 \end{figure}
 
-We decompose runtime on the 604M-cell grid into individual solver
-stages, as shown in Fig.~\ref{fig:stagescale}. 
+Figure~\ref{fig:stagescale} breaks down the step time on the 604M-cell
+grid by solver stage.
 From 16 to 64 GPUs, the derivative stage falls from 25\,ms to 8\,ms,
 the SGS stage from 35\,ms to 11\,ms, and the turbine stage from 8\,ms
 to 2\,ms, 
@@ -138,10 +140,10 @@ efficiently on the smaller subdomain. The \texttt{Other}
 stage costs about 30\,ms per step at every scale. Its main
 component is the host-side stage of the turbine coupling, whose cost
 depends on the turbine count and the blade discretization rather than
-on the grid size. The stage also includes collectives and kernel launch
-time. The dominant collective is the global CFL reduction required for 
-adaptive time stepping and turbine-forcing load balance. 
-Together, these components form a fixed per-step cost.
+on the grid size. This stage also includes kernel launch time and
+collectives, mainly the global reduction that determines the adaptive
+time step size.
+% Together, these components form a fixed per-step cost.
 
 \begin{figure}[h]
 \centering
@@ -158,7 +160,8 @@ bandwidth, while batched cuFFT
 kernels reach 48--82\% of peak memory bandwidth. Together, these two
 families account for 98.5\% of profiled kernel time. 
 The two actuator-line kernels fall below the roof, which we attribute
-to irregular gather and scatter at off-grid blade points. They take
+to irregular gather and scatter at off-grid blade points and to the
+limited parallelism of the blade-point set. They take
 only 1.5\% of kernel time, so their overall effect is negligible.
 
 \begin{figure}[h]
@@ -169,7 +172,7 @@ only 1.5\% of kernel time, so their overall effect is negligible.
 \vspace{-0.1in}
 \end{figure}
 
-Fig.~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
+Figure~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
 a fixed grid size and the domain grows vertically with process count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
