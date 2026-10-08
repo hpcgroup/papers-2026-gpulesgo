@@ -2,8 +2,8 @@ We presented the first GPU port of LESGO, a pseudo-spectral wind-farm
 large-eddy simulation solver comprising nearly 70{,}000 lines of
 Fortran code. We demonstrated that porting such a legacy codebase
 requires a fine-grained data-management strategy. We classified every
-host--device coupling point in LESGO and identified four treatments
-that together decide compute offloading and data movement. In addition, we presented three
+host--device coupling point in LESGO and presented four treatments
+that systematically decide compute offloading and data movement. In addition, we presented three
 optimizations, including chunk pipelining across serial process chains,
 batching many small work items, and CPU--GPU heterogeneous overlap.
 We believe these

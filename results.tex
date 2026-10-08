@@ -111,11 +111,10 @@ optimization removes a distinct bottleneck.
 The fully optimized GPU solver achieves 0.162\,s per time step (0.27\,ms
 per million cells), representing a $40\times$ speedup over the fastest
 CPU configuration. 
-% Production runs update the LASD coefficient every fifth step 
-% (\S\ref{sec:opt-batch}), so the 0.162\,s progression excludes this cost. 
-We also compare the performance with the LASD model enabled (bottom
-rows of Table~\ref{tab:cumulative}). 
-Our GPU version delivers a $39.7\times$ speedup over the CPU version. 
+The bottom two rows of Table~\ref{tab:cumulative} separately report
+the performance with the LASD coefficient update enabled at $q=5$
+(Section~\ref{sec:setup}). Our GPU version again delivers a
+$39.7\times$ speedup over the CPU version. 
 
 
 \begin{table}[h]
@@ -234,8 +233,7 @@ Figure~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
 a fixed grid size and the domain grows vertically with process count.
 At the production load of 29.5M cells per GPU the port sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
-64 GPUs). The other two problem sizes exhibit similarly high weak-scaling
-efficiency. 
+64 GPUs). The other two problem sizes exhibit similarly high weak-scaling efficiency. 
 % This confirms that scaling efficiency is maintained as long as
 % each GPU carries a sufficiently large workload, which is the regime
 % that production runs occupy. 

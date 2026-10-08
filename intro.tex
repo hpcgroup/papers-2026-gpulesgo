@@ -100,11 +100,11 @@ physics pipeline. To our knowledge, this is the first directive-based
 GPU LES with actuator-line wind-farm coupling at this scale. Our code 
 will be open-sourced upon acceptance.
 \item We present a fine-grained data residency strategy that jointly
-decides where each array resides and where each routine computes. For
-the resulting host--device coupling points, we propose four treatments
-(gate, relocate, slice, and overlap) that minimize data movement. 
-This strategy provides a
-practical reference for porting other large Fortran codes to GPUs.
+decides where each array resides and where each routine computes. We
+classify all host--device coupling points and resolve them
+with four treatments (gate, relocate, slice, and overlap),
+which provides a systematic reference for porting  large Fortran
+codes to GPUs.
 \item We develop three optimizations for the structural bottlenecks: 
 chunk pipelining across serial process
 chains to hide inter-process communication delays, batching many small

@@ -29,7 +29,7 @@ optimize them on GPUs.
 \STATE $\ldots$
 \STATE \textcolor{stgderiv}{Derivatives()}\algptr{stgderiv}{sec:method-taxonomy}
 \STATE \textcolor{stgsgs}{SGS()}
-\STATE \hspace{1.3em}\textbf{if} $n \bmod c = 0$ \textbf{then}
+\STATE \hspace{1.3em}\textbf{if} $n \bmod q = 0$ \textbf{then}
 \STATE \hspace{2.6em}\textcolor{stgsgs}{UpdateLASDCoefficient()}\algptr{stgsgs}{sec:opt-batch}
 \STATE \hspace{1.3em}\textcolor{stgsgs}{SGSStress()}
 \STATE \hspace{1.3em}\textcolor{stgsgs}{StressDivergence()}
@@ -59,8 +59,8 @@ planes. The stage therefore combines many 2D FFTs with streaming sweeps
 over 3D arrays.
 
 \stagelead{stgsgs}{SGS} (lines 5--9). The SGS model represents the effect
-of turbulent motions smaller than the grid spacing. Every $c$-th step
-($c$=5 in production runs), \texttt{UpdateLASDCoefficient()} recomputes
+of turbulent motions smaller than the grid spacing. Every $q$-th step ($q$ is a run-time parameter),
+\texttt{UpdateLASDCoefficient()} recomputes
 the LASD model coefficient (Section~\ref{sec:bg-physics}). It filters
 21 3D fields at two filter widths with 2D FFTs and interpolates four fields along
 fluid-particle trajectories, which makes it the most irregular
