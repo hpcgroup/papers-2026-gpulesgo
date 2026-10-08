@@ -8,9 +8,8 @@ Perlmutter CPU nodes with two 64-core AMD EPYC 7763 (Milan) CPUs each.
 farm of NREL 5-MW reference turbines~\cite{jonkman2009} in a
 $10\times6$ array with $7D$ streamwise and $5D$ spanwise spacing
 ($D=126$\,m), in a $28.2 \times 3.8 \times 2.0$\,km domain discretized
-by $3072\times384\times512 \approx 604$M grid points, with the LASD SGS
-model, equilibrium wall model, and actuator-line turbines.
-Since the LASD update cost depends on the user-chosen cadence $q$, we disable it in this section. We separately
+by $3072\times384\times512 \approx 604$M grid points, with the equilibrium wall model, and actuator-line turbines.
+Since the LASD update depends on the user-chosen cadence $q$, we disable it in this section. We separately
 report the performance with the LASD model enabled in
 Table~\ref{tab:cumulative}.
 Table~\ref{tab:cases} lists the scaling series. Strong scaling runs

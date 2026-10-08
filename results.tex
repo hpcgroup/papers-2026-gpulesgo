@@ -1,16 +1,4 @@
 
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=1\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
-    \vspace{-0.2in}
-    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
-    1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
-    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
-    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
-    \label{fig:lesgo-cpu-gpu-field}
-    \vspace{-0.1in}
-\end{figure*}
-
 This section first validates the GPU port against the CPU version and
 then evaluates solver performance on the production wind-farm
 benchmark. We present cumulative speedups and analyze strong and weak
@@ -20,7 +8,7 @@ scaling behavior.
 \label{sec:results-validation}
 
 
-Before we evaluate performance, we verify that the GPU port reproduces
+We now verify that the GPU port reproduces
 the results of the CPU version. We use a small case with one NREL 5-MW
 turbine, modeled by a panel-based actuator-line method with 120
 actuator points per blade, and we disable both the SGS model and
@@ -106,15 +94,14 @@ waves for an additional $1.9\times$. Batching small work items into a few
 kernels and packed reductions (\S\ref{sec:opt-batch}) cuts the
 launch and collective overhead for another $1.6\times$. Finally,
 heterogeneous CPU--GPU execution
-(\S\ref{sec:opt-overlap}) contributes a $1.2\times$ speedup. Each
-optimization removes a distinct bottleneck.
+(\S\ref{sec:opt-overlap}) contributes a $1.2\times$ speedup.
 The fully optimized GPU solver achieves 0.162\,s per time step (0.27\,ms
-per million cells), representing a $40\times$ speedup over the fastest
+per million cells), a $40\times$ speedup over the fastest
 CPU configuration. 
 The bottom two rows of Table~\ref{tab:cumulative} separately report
 the performance with the LASD coefficient update enabled at $q=5$
-(Section~\ref{sec:setup}). Our GPU version again delivers a
-$39.7\times$ speedup over the CPU version. 
+(Section~\ref{sec:setup}), where our GPU version again delivers a
+$39.7\times$ speedup.
 
 
 \begin{table}[h]
@@ -157,11 +144,11 @@ and kernel optimizations are effective and complement each other.
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling.pdf}
-\caption{Strong scaling of the wind-farm case at three problem
-sizes. Labels on the 604M curve give the speedup over the fastest CPU
+\caption{Strong scaling of LESGO at three problem
+sizes. Labels on the 604M give the speedup over the fastest CPU
 configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
-\vspace{-0.05in}
+\vspace{-0.1in}
 \end{figure}
 
 Figure~\ref{fig:scaling} presents strong scaling for the 60-turbine wind
@@ -173,6 +160,7 @@ scale, the GPU solver runs 90$\times$ faster than the fastest CPU
 configuration (Table~\ref{tab:cumulative}).
 
 \begin{figure}[h]
+    \vspace{-0.05in}
     \centering
     \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
     \caption{Breakdown of GPU LESGO step time by stage on the 604M-cell
@@ -195,18 +183,18 @@ From 16 to 64 GPUs, the kernel time of every stage drops by
 cost of kernel launches and the collectives of the adaptive time step, 
 whose cost depends on the turbine count and the blade
 discretization rather than on the grid size.
-On 64 GPUs, however, \texttt{Others} grows to 31\,ms. We attribute
-this to the small workload per process, which is no longer large
-enough to hide the host cost.
+On 64 GPUs, however, \texttt{Others} grows to 31\,ms. At this
+scale, each GPU holds only 9.4M cells, so the GPU no
+longer runs large enough to hide the host-side work, and the exposed 
+host time appears in \texttt{Others}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
-\caption{Roofline of the LESGO kernels in one production step on an
-A100 GPU (Perlmutter). Colors give the stage in Algorithm~\ref{alg:step},
+\caption{Roofline of the LESGO kernels. Colors give the stage in Algorithm~\ref{alg:step},
 and open circles mark cuFFT kernels, which serve several stages.}
 \label{fig:roofline}
-\vspace{-0.05in}
+\vspace{-0.1in}
 \end{figure}
 
 Figure~\ref{fig:roofline} demonstrates the kernels of one production step on
@@ -222,11 +210,12 @@ negligible.
 % They perform many floating-point operations per byte of DRAM traffic, which places them right of the ridge point.
 
 \begin{figure}[h]
+    \vspace{-0.05in}
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
 \caption{Weak scaling at three per-GPU loads on Perlmutter.}
 \label{fig:weakscaling}
-\vspace{-0.1in}
+\vspace{-0.05in}
 \end{figure}
 
 Figure~\ref{fig:weakscaling} reports weak scaling, where each GPU retains

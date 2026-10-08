@@ -120,6 +120,19 @@ The same approach applies to any host routine whose
 inputs are fixed early in the step and whose outputs are needed only
 later.
 
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
+    \vspace{-0.1in}
+    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
+    1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
+    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
+    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
+    \label{fig:lesgo-cpu-gpu-field}
+    \vspace{-0.1in}
+\end{figure*}
+
+
 \subsection{Experiences Porting to Modern GPUs}
 \label{sec:opt-impl}
 
