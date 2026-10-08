@@ -1,6 +1,6 @@
 This section presents our GPU porting approach, followed by our 
-fine-grained data-management strategy designed to minimize host--device 
-data movement.
+fine-grained data-management strategy designed to minimize 
+host--device data movement.
 
 LESGO contains nearly 300 loop nests, which makes rewriting all of
 them as CUDA Fortran kernels difficult. It is also an extensive,
@@ -73,10 +73,9 @@ coupling point.
 \subsection{Choices of Data Placement}
 \label{sec:method-placement}
 
-The solver state of LESGO consists of dozens of persistent 3D Fortran
-arrays of $O(N_xN_yN_z)$ size, including velocity components, velocity
-gradients, SGS stresses, and dealiased spectral scratch fields. Each
-unnecessary host--device transfer therefore moves an entire field.
+Each solver stage of LESGO consists of dozens of persistent 3D Fortran
+arrays of $O(N_xN_yN_z)$ size. Each
+unnecessary host--device transfer therefore moves an entire 3D array.
 Directive-based ports commonly adopt the following data placement
 strategies: CUDA managed memory, array mirroring, and fine-grained
 explicit residency. The first two strategies require few
@@ -102,9 +101,9 @@ over the CPU version.
 
 \vspace{0.08in}
 \textbf{Array Mirroring.} Next, we evaluate array mirroring, which keeps
-a device copy of every host array. We build LESGO with
+a device copy of host array. We build LESGO with
 \texttt{-gpu=mem:separate} and synchronize arrays with \texttt{update}
-directives around each host routine. Mirroring works well when the
+directives around each host routine. This strategy works well when the
 solver state fits comfortably in device memory and every kernel moves
 to the GPU, so that data returns to the host only for diagnostics and
 checkpoints. LESGO
@@ -129,7 +128,13 @@ footprints, which the third strategy provides.
 \vspace{0.08in}
 \textbf{Fine-Grained Explicit Residency.} This strategy lets the
 developer decide, array by array, where each field resides and which
-part of it moves. We classify the arrays by which side accesses them.
+part of it moves. Unlike mirroring, this strategy does not require us to move every
+kernel to the GPU. We can keep routines that suit the CPU better on the
+host, as long as they exchange little data with the GPU. Each routine
+thus runs on the processor that executes it faster, and the host-only
+arrays need no device copy, which lets us run a given grid on fewer
+GPUs. The coupling points therefore depend on where each routine
+computes. We classify the arrays by which side accesses them.
 For arrays that only GPU kernels access, such as the LASD filter scratch
 fields, we keep the data on the device at all times. For arrays that
 only host routines access, we leave them in host memory. 
@@ -142,14 +147,6 @@ In OpenACC, we make every array that GPU kernels access device-resident
 for the entire run (\texttt{declare create} or \texttt{enter data}), and
 we add \texttt{default(present)} to every kernel, so no data moves
 implicitly.
-
-Unlike mirroring, this strategy does not require us to move every
-kernel to the GPU. We can keep routines that suit the CPU better on the
-host, as long as they exchange little data with the GPU. Each routine
-thus runs on the processor that executes it faster, and the host-only
-arrays need no device copy, which lets us run a given grid on fewer
-GPUs. The coupling points therefore depend on where each routine
-computes, and we turn to this decision next.
 
 \subsection{Deciding Where to Compute and What to Move}
 \label{sec:method-taxonomy}
@@ -172,8 +169,8 @@ However, not every routine fits this pattern. Some
 routines carry serial dependencies, such as the pressure
 zero-wavenumber recurrence. Others run better on the CPU, such as the
 tabulated airfoil polar lookups, which involve irregular branching. In
-addition, checkpoint writes require host I/O. We move a routine to the
-GPU if it still exposes enough parallelism, restructuring it
+addition, checkpoint writes require host I/O. We therefore move a routine
+to the GPU only if it still exposes enough parallelism, restructuring it
 if necessary (Section~\ref{sec:opt}). Otherwise, we keep it on the
 host. Every routine that stays on the host reads or writes solver
 state at the coupling point, so the placement of computation also
@@ -208,10 +205,8 @@ routine does not run.
 \vspace{0.08in}
 \textbf{Relocate} exploits parallelism in the host routine. If the
 routine parallelizes well, we port it to the GPU so it can read
-device-resident data in place. We apply
-this to the time-integration and projection pipeline, the diagnostic
-reductions, actuator sampling and force projection, and the distributed
-tridiagonal chains. 
+device-resident data in place, such as the diagnostic reductions
+and the distributed tridiagonal chains. 
 
 \vspace{0.08in}
 \textbf{Slice} applies when a routine should stay on the host but
@@ -265,7 +260,7 @@ tridiagonal equations along $z$, and a batched GPU solver handles all
 columns in one call. One column, however, cannot use this
 solver, and we
 compute it separately on the host.
-A mirroring port synchronizes the full
+A naive port synchronizes the full
 \texttt{p} and \texttt{rH\_z} arrays around this routine, which costs three
 full-array transfers per step. Yet the routine reads only one column of
 \texttt{rH\_z} and writes only one column of \texttt{p}. We therefore

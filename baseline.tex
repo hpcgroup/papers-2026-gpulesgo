@@ -1,6 +1,6 @@
 In this section, we first outline the sequential algorithm of a 
 single time step of LESGO. Then, we describe its MPI parallelization and 
-analyze the scaling limits that motivate our GPU acceleration strategy.
+analyze the scaling limits that motivate porting and accelerating it on GPUs.
 
 \subsection{Structure of a Time Step}
 \label{sec:step}
@@ -118,6 +118,7 @@ turbulence scalars, are stored as 3D Fortran arrays.
     \includegraphics[width=\columnwidth]{figs/lesgo_domain_communication.pdf}
     \caption{LESGO's decomposition. (a) The $N_x \times N_y \times N_z$ grid is split along $z$ into $n$ slabs of $N_z/n$ contiguous $x$-$y$ planes. (b) Vertical finite-difference stencils copy each slab's boundary plane into its neighbor's ghost plane.}
     \label{fig:lesgo-decomposition}
+    \vspace{-0.1in}
 \end{figure}
 
 
@@ -135,10 +136,9 @@ Pressure is thus the main stage with fine-grained, globally coupled
 communication. Third, small collective reductions (\texttt{MPI\_Allreduce})
 run over all processes for the adaptive Courant--Friedrichs--Lewy (CFL)
 time step control and runtime diagnostic logging, and over only the
-processes each turbine spans for per-turbine force aggregation. By avoiding 2D
-domain transposes, this 1D slab decomposition keeps
-horizontal FFTs local to each process at the expense of a globally coupled
-vertical solve. 
+processes each turbine spans for per-turbine force aggregation.
+% In short, the slab decomposition trades 2D transposes for
+% a vertically coupled solve.
 % We retain this decomposition in the GPU port.  Although a 2D
 % pencil decomposition can scale to more processes, the 1D slab layout fully
 % satisfies our target physics. LESGO does not pursue ever-larger wind-farm
@@ -148,12 +148,13 @@ vertical solve.
 % preserving structural alignment with the community-maintained CPU codebase.
 
 \begin{figure}[h]
+    \vspace{-0.05in}
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
     \caption{CPU strong scaling of LESGO on the production case (Section~\ref{sec:setup}). 
     The cross marks 128 processes on a single node, which exceeds node memory.}
     \label{fig:ceiling}
-    \vspace{-0.1in}
+    \vspace{-0.05in}
 \end{figure}
     
 

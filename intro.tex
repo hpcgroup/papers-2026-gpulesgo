@@ -52,8 +52,7 @@ not kernel throughput but data movement.
 Pseudo-spectral multiphysics LES has recurring host--device
 \emph{coupling points}, where host-side code must read or write
 device-resident state. They vary widely in how much of the field they
-touch and how often, so no single blanket data-placement policy fits
-them all. The two data strategies common to directive-based ports both
+touch and how often. The two data strategies common to directive-based ports both
 encounter severe limitations here. (1)~CUDA managed memory lets the driver
 migrate pages between host and device on demand~\cite{caplan2023dc}.
 This strategy requires the least porting effort, but it hides data
@@ -69,7 +68,7 @@ Mirroring leaves open how to serve these host routines,
 and each full-field transfer stalls the GPU. Mirroring every
 array also consumes device memory, therefore it requires more GPUs for the
 same problem size.
-Thus, achieving high performance for LESGO requires a fine-grained data
+Thus, LESGO requires a fine-grained data
 residency strategy tailored to its host--device coupling points.
 
 In this paper, we present a high-performance GPU port of LESGO that preserves its
