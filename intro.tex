@@ -59,37 +59,36 @@ migrate pages between host and device on demand~\cite{caplan2023dc}.
 This strategy requires the least porting effort, but it hides data
 movement from the source code and incurs page-migration
 overhead~\cite{chien2019um}.
-(2)~Array mirroring keeps a device copy of every host
+(2)~Array mirroring keeps a device copy of host
 array~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. This strategy
 typically moves all computation to the GPU and returns full fields to
-the host mainly for output.
-However, in LESGO we find that some operations suit the CPU better, such as the 
-serial pressure recurrence and the airfoil table lookups, and they read solver
-state every step. Mirroring leaves open how to serve these host routines,
+the host only for diagnostics and checkpoints.
+However, in LESGO we find that some operations suit the CPU better, such as 
+the airfoil table lookups, and they read solver state every step. 
+Mirroring leaves open how to serve these host routines,
 and each full-field transfer stalls the GPU. Mirroring every
-array also consumes device memory, therefore LESGO needs more GPUs for the
+array also consumes device memory, therefore it requires more GPUs for the
 same problem size.
 Thus, achieving high performance for LESGO requires a fine-grained data
 residency strategy tailored to its host--device coupling points.
 
-In this paper, we present our approach to porting the Fortran solver in LESGO
-to GPGPUs. The port preserves the solver's validated physics and brings
-production-scale wind-farm LES within practical reach. We begin by measuring
-two placement strategies on LESGO, CUDA managed memory and
-array mirroring, and trace the bottleneck in both to host--device
-coupling points. Guided by this analysis, we examine all coupling points across the solver,
-classify them by host read footprints, and apply four treatments: 
-\emph{gate} skips a transfer whenever its
-conditional or infrequent host routine does not execute; \emph{relocate} ports
-the host routine to the GPU and removes the transfer altogether; \emph{slice}
-shrinks a transfer to the subset of the field the host touches; and
-\emph{overlap} hides host computation behind concurrent GPU execution.
-Beyond these data-residency treatments, we apply three further optimizations
-to the remaining structural bottlenecks. We pipeline
-independent systems across a serialized process chain to accelerate the pressure
-equation's distributed tridiagonal solve; batch many small work items to
-mitigate kernel launch overhead; and hide residual host-side airfoil physics
-behind device execution through CPU--GPU heterogeneous execution.
+In this paper, we present a high-performance GPU port of LESGO that preserves its
+validated physics. We examine all host--device coupling points across
+the solver, classify them systematically, and present four
+treatments that together decide
+compute offloading and data movement: \emph{gate} skips a transfer
+whenever its conditional or infrequent host routine does not execute;
+\emph{relocate} ports the host routine to the GPU and removes the
+transfer altogether; \emph{slice} keeps a routine on the host when it
+suits the CPU better and touches only a small part of a field; 
+and \emph{overlap} keeps a routine on the host, and
+overlaps it with concurrent GPU execution. Beyond these treatments, we develop
+three optimizations for the remaining structural bottlenecks: chunk
+pipelining across serial process chains to hide inter-process
+communication delays in the distributed tridiagonal solve of the
+pressure equation, batching many small work items to mitigate kernel
+launch overhead, and CPU--GPU heterogeneous execution to overlap
+residual host physics with the GPU backlog.
 
 We implement our GPU port in OpenACC using the NVHPC compiler,
 and evaluate it on NVIDIA A100 GPUs. 
@@ -103,14 +102,12 @@ will be open-sourced upon acceptance.
 decides where each array resides and where each routine computes. We
 classify all host--device coupling points and resolve them
 with four treatments (gate, relocate, slice, and overlap),
-which provides a systematic reference for porting  large Fortran
+which provides a systematic reference for porting large Fortran
 codes to GPUs.
-\item We develop three optimizations for the structural bottlenecks: 
-chunk pipelining across serial process
-chains to hide inter-process communication delays, batching many small
-work items to mitigate kernel launch overhead, and CPU--GPU
-heterogeneous execution to overlap residual host physics with the GPU
-backlog.
+\item We develop three optimizations for the structural bottlenecks:
+chunk pipelining across serial process chains, batching many small
+work items, and CPU--GPU heterogeneous execution. We also identify
+several general practices for porting Fortran codes to GPUs.
 \item We evaluate the GPU version at production scale on a 604M-cell, 60-turbine 
 wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline at
 equal node count and up to 90$\times$ on 64 GPUs.
