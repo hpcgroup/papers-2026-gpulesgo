@@ -8,7 +8,7 @@ porting effort.
 \begin{figure}[h]
     \vspace{-0.05in}
 \centering
-\includegraphics[width=\linewidth]{figs/fig4_lesgo_pipeline.pdf}
+\includegraphics[width=0.95\linewidth]{figs/fig4_lesgo_pipeline.pdf}
 \caption{Pipelining the distributed Thomas solve. (a)~Serial dependencies across processes leave processes idle. (b)~Chunking and pipelining overlap forward elimination (blue) with boundary transfers and back substitution (orange).}
 \label{fig:tridag}
     \vspace{-0.05in}
@@ -53,7 +53,7 @@ improve hardware occupancy.
 We demonstrate this strategy with the actuator-line turbine model and the LASD subgrid-scale closure.
 
 For the actuator-line model (lines 11--14 in Algorithm~\ref{alg:step}), 
-a naive port keeps the per-turbine loop of the CPU version. 
+a naive port keeps the per-turbine loop of LESGO-CPU. 
 Each turbine issues many device uploads,
 kernel launches, and small collective reductions.
 The total count grows with the number of turbines, and a
@@ -76,9 +76,8 @@ selected wavenumbers, and applies an inverse 2D FFT. A naive port
 therefore launches thousands of single-plane FFTs per update, and none
 of them is large enough to fill the GPU. We instead promote the 2D
 scratch planes to 3D arrays, so that one batched cuFFT call filters all
-vertical levels of a field at once. The thousands of launches become a
-few dozen batched calls, and each call carries enough work to keep the
-GPU busy.
+vertical levels of a field. The thousands of launches become a
+few dozen batched calls, each of which is large enough to fill the GPU.
 
 \subsection{Heterogeneous CPU--GPU Execution}
 \label{sec:opt-overlap}
@@ -94,8 +93,9 @@ Kernel-launch and data-transfer overheads also exceed the useful
 computation. We accordingly keep this routine on the host.
 
 \begin{figure}[h]
+    \vspace{-0.05in}
     \centering
-    \includegraphics[width=\linewidth]{figs/fig_overlap.pdf}
+    \includegraphics[width=0.95\linewidth]{figs/fig_overlap.pdf}
     \caption{Splitting the actuator-line model into two phases to enable CPU--GPU computation overlap.}
     \label{fig:overlap}
     \vspace{-0.1in}
@@ -122,9 +122,9 @@ later.
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.98\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
+    \includegraphics[width=0.94\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
     \vspace{-0.1in}
-    \caption{Validation of a GPU run against a CPU run for one NREL 5-MW turbine after
+    \caption{Validation of LESGO-GPU against LESGO-CPU for one NREL 5-MW turbine after
     1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
     vertical rotor-center plane, same color scale. (c) Difference of GPU--CPU, which stays at roundoff scale ($\sim\!10^{-14}$).}
     \label{fig:lesgo-cpu-gpu-field}
@@ -177,6 +177,5 @@ complex-multiplication operator used in spectral differentiation,
 return their result in a newly allocated array. Inside a GPU kernel,
 each call to such a function therefore triggers a device memory
 allocation, whose cost far exceeds the few arithmetic operations the
-function performs. We manually inline these functions at their call
-sites, so that each result is written directly into the target array
-without any temporary allocation.
+function performs. We manually inline these functions so that each
+result is written in place without any temporary allocation.

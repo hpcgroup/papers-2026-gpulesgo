@@ -1,5 +1,5 @@
 
-This section first validates the GPU port against the CPU version and
+This section first validates LESGO-GPU against \mbox{LESGO-CPU} and
 then evaluates solver performance on the production wind-farm
 problem. We present cumulative speedups and analyze strong and weak
 scaling behavior.
@@ -8,8 +8,8 @@ scaling behavior.
 \label{sec:results-validation}
 
 
-We now verify that the GPU port reproduces
-the results of the CPU version. We use a small problem with one NREL 5-MW
+We now verify that LESGO-GPU reproduces
+the results of LESGO-CPU. We use a small problem with one NREL 5-MW
 turbine, modeled by a panel-based actuator-line method with 120
 actuator points per blade, and we disable the SGS model and
 molecular viscosity. The CPU and GPU runs share the same cold start,
@@ -29,15 +29,16 @@ at the roundoff level. The hub-height centerline profiles
 With the LASD model enabled, the two versions agree to
 roundoff over the first several steps, and their time-averaged
 statistics agree within sampling uncertainty. These results confirm
-that the GPU port preserves the numerical behavior of the CPU version.
+that LESGO-GPU preserves the numerical behavior of LESGO-CPU.
 
 \begin{figure}[h]
     \vspace{-0.05in}
     \centering
-    \includegraphics[width=1\columnwidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
+    \includegraphics[width=0.95\columnwidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
     \caption{Hub-height centerline profiles of $u/U_\infty$ from the CPU
     and GPU runs of Fig.~\ref{fig:lesgo-cpu-gpu-field}. The two curves
     fully coincide.}
+    \vspace{-0.05in}
     \label{fig:lesgo-cpu-gpu}
     \vspace{-0.1in}
 \end{figure}
@@ -46,10 +47,11 @@ that the GPU port preserves the numerical behavior of the CPU version.
 \label{sec:results-opt}
 
 \begin{table}[h]
+    \vspace{-0.1in}
 \centering
 \caption{Cumulative speedup from optimizations on 4 GPU nodes, 16 A100 GPUs for the
 production problem (604M cells, 60 turbines) against the fastest
-CPU baseline (4 CPU nodes, Fig.~\ref{fig:ceiling}).}
+LESGO-CPU configuration (4 CPU nodes, Fig.~\ref{fig:ceiling}).}
 \label{tab:cumulative}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -74,7 +76,7 @@ GPU, fine-grained explicit residency (\S\ref{sec:method-placement})
                                         & 0.206 & \textbf{39.7$\times$} \\
 \bottomrule
 \end{tabular}
-\vspace{-0.1in}
+\vspace{-0.05in}
 \end{table}
 
 Table~\ref{tab:cumulative} shows how the performance of LESGO improves as we apply the optimizations one by one. Each row
@@ -105,9 +107,11 @@ $39.7\times$ speedup.
 
 
 \begin{table}[h]
+    \vspace{-0.05in}
     \centering
-    \caption{Execution profile of the final port on the production problem
-    (16 A100 GPUs, \texttt{nsys}/\texttt{ncu}, per step).}
+    \caption{Execution profile of LESGO-GPU on the production problem.
+    % (16 A100 GPUs, \texttt{nsys}/\texttt{ncu}, per step)
+    }
     \label{tab:finalmetrics}
     \footnotesize
     \begin{tabular}{@{}lr@{}}
@@ -143,10 +147,10 @@ and kernel optimizations are effective and complement each other.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\linewidth]{figs/fig_scaling.pdf}
-\caption{Strong scaling of LESGO at three problem
-sizes. Labels on the 604M show the speedup over the fastest CPU
-configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
+\includegraphics[width=0.98\linewidth]{figs/fig_scaling.pdf}
+\caption{Strong scaling of LESGO-GPU at three problem
+sizes. Labels on the 604M show the speedup over the fastest
+LESGO-CPU run (Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
 \vspace{-0.1in}
 \end{figure}
@@ -156,13 +160,13 @@ farm across vertical grid resolutions of 512, 768, and 1152 levels. All
 three problem sizes show robust strong scaling, and the 1.36B-cell
 grid scales out to 128 GPUs. On the production 604M-cell grid, 64 GPUs 
 run it $2.2\times$ faster than 16 GPUs, at 0.072\,s per step. At this 
-scale, the GPU solver runs 90$\times$ faster than the fastest CPU 
+scale, LESGO-GPU runs 90$\times$ faster than the fastest LESGO-CPU 
 configuration (Table~\ref{tab:cumulative}).
 
 \begin{figure}[h]
     \vspace{-0.05in}
     \centering
-    \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
+    \includegraphics[width=0.98\linewidth]{figs/fig_stagescale.pdf}
     \caption{Breakdown of LESGO-GPU step time by stage on the 604M-cell
     grid. \texttt{Others} is the rest of the measured step time.}
     % \texttt{Other} includes the velocity projection and the routines elided
@@ -190,7 +194,7 @@ host time appears in \texttt{Others}.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
+\includegraphics[width=0.98\linewidth]{figs/fig_roofline.pdf}
 \caption{Roofline plot showing several important LESGO kernels. Colors give the stage in Algorithm~\ref{alg:step},
 and open circles mark cuFFT kernels, which serve several stages.}
 \label{fig:roofline}
@@ -204,7 +208,7 @@ kernel time.
 cuFFT kernels take 62\% of kernel time and run at 78\% of peak
 bandwidth. Aggregated by stage,
 every stage except the turbines sustains 77--81\% of peak bandwidth. The only
-kernels below the roof are the actuator-line kernels. We attribute this to their irregular access to grid cells around off-grid blade points.
+kernels well below the roof are the actuator-line kernels. We attribute this to their irregular access to grid cells around off-grid blade points.
 These kernels take only 0.7\% of kernel time, so their overall effect is
 negligible.
 % They perform many floating-point operations per byte of DRAM traffic, which places them right of the ridge point.
@@ -212,7 +216,7 @@ negligible.
 \begin{figure}[h]
     \vspace{-0.05in}
 \centering
-\includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
+\includegraphics[width=0.98\linewidth]{figs/fig_scaling_weak.pdf}
 \caption{Weak scaling of LESGO-GPU for three problem sizes on Perlmutter.}
 \label{fig:weakscaling}
 \vspace{-0.05in}
@@ -220,7 +224,7 @@ negligible.
 
 Figure~\ref{fig:weakscaling} reports weak scaling, where each GPU retains
 a fixed grid size and the domain grows vertically with process count.
-At the production load of 29.5M cells per GPU the port sustains 90\%
+At the production load of 29.5M cells per GPU, LESGO-GPU sustains 90\%
 parallel efficiency at 64 GPUs (149.4 to 165.7\,ms per step from 4 to
 64 GPUs). The other two problem sizes exhibit similarly high weak-scaling efficiency. 
 % This confirms that scaling efficiency is maintained as long as

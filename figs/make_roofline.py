@@ -70,7 +70,7 @@ for name, a in sorted(acc.items(), key=lambda kv: -kv[1]["t"]):
                    linewidths=0.5, edgecolors="white")
     if name.startswith("atm_lesgo_interface_atm_batch_convolute_force_gpu_6979"):
         ax.annotate("actuator-line force projection", xy=(ai, tf), xytext=(6, 10),
-                    textcoords="offset points", ha="center", fontsize=10, color="#333333")
+                    textcoords="offset points", ha="center", fontsize=12, color="#333333")
     # if name == "regular_fft<576>":
     #     ax.annotate("FFT on the 3/2 grid", xy=(ai, tf), xytext=(10, -10),
     #                 textcoords="offset points", ha="left", fontsize=10, color="#333333")
@@ -81,7 +81,7 @@ handles = [plt.Line2D([], [], ls="none", marker=MK[s], color=COL[s], ms=ms, labe
                      "Projection", "Other"]]
 handles.append(plt.Line2D([], [], ls="none", marker="o", mfc="white", mec="black",
                           ms=ms, label="cuFFT"))
-ax.legend(handles=handles, loc="lower right", fontsize=10,
+ax.legend(handles=handles, loc="lower right",
           handletextpad=0.3, borderaxespad=0.3, borderpad=0.3, labelspacing=0.2,
           handlelength=1.0, ncol=2, columnspacing=0.8)
 ax.set_xlim(0.02, 300); ax.set_ylim(0.03, 30)

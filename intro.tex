@@ -26,8 +26,7 @@ collocation in the horizontal directions, a scale-dependent Lagrangian dynamic
 subgrid-scale (SGS) model~\cite{bouzeid2005}, and actuator-line turbine
 coupling~\cite{sorensen2002}. The pseudo-spectral discretization adds negligible
 numerical dissipation and delivers high accuracy per grid point. Its CPU implementation,
-however, saturates node memory bandwidth even at tens of cores and exhausts its
-slab decomposition at modest process counts (Section~\ref{sec:bg-impl}), severely
+however, saturates node memory bandwidth even at tens of cores and reaches the limit of its decomposition at modest node counts (Section~\ref{sec:bg-impl}), severely
 constraining production-scale runs.  Because the scientific fidelity of
 turbulent wake simulations relies on capturing long physical integration times,
 this performance ceiling directly limits accessible physical time scales.
@@ -89,7 +88,9 @@ pressure equation, batching many small work items to mitigate kernel
 launch overhead, and CPU--GPU heterogeneous execution to overlap
 residual host physics with the GPU backlog.
 
-We implement our GPU port in OpenACC using the NVHPC compiler,
+In this paper, we refer to the existing MPI-only parallel version of LESGO for CPUs as
+\emph{LESGO-CPU} and to our OpenACC-based MPI+GPU port as
+\emph{LESGO-GPU}. We build \mbox{LESGO-GPU} with the NVHPC compiler
 and evaluate it on NVIDIA A100 GPUs. 
 This work makes the following contributions:
 \begin{itemize}
@@ -107,8 +108,8 @@ codes to GPUs.
 chunk pipelining across serial process chains, batching many small
 work items, and CPU--GPU heterogeneous execution. We also identify
 several general practices for porting Fortran codes to GPUs.
-\item We evaluate the GPU version at production scale on a 604M-cell, 60-turbine 
-wind farm, achieving a 40$\times$ speedup over the fastest CPU baseline at
+\item We evaluate LESGO-GPU at production scale on a 604M-cell, 60-turbine 
+wind farm, achieving a 40$\times$ speedup over the fastest LESGO-CPU run at
 equal node count and up to 90$\times$ on 64 GPUs.
 We also demonstrate scaling up to 128 GPUs on a 1.36-billion-cell grid. 
 \end{itemize}

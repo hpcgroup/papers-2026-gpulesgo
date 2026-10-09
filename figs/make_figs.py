@@ -56,7 +56,7 @@ ax.set_yscale("log")
 # markers whole where the axis ends exactly at 512.
 ax.plot(cores, tstep, color=VERM, zorder=2, clip_on=False)
 ax.plot(cores, tstep, ps.MARKERS[0], color=VERM, mew=0, ls="none",
-        zorder=3, label="CPU", clip_on=False)
+        zorder=3, label="LESGO-CPU", clip_on=False)
 
 ax.plot([oom_core], [oom_t], "x", ms=10, mew=2, color=VERM, ls="none",
         zorder=4)
@@ -66,7 +66,7 @@ ax.annotate("out of memory", xy=(oom_core, oom_t), xytext=(0, 9),
 
 # GPU: single measured point (16 x A100 on 4 nodes), no line
 ax.plot([512], [GPU_T], ps.MARKERS[1], color=BLUE, mew=0, ls="none",
-        zorder=4, label="GPU", clip_on=False)
+        zorder=4, label="LESGO-GPU", clip_on=False)
 ax.annotate("4 GPU nodes (16 A100 GPUs): 0.162 s", xy=(512, GPU_T), xytext=(-9, 0),
             textcoords="offset points", color=BLUE, fontsize=12,
             va="center", ha="right")
@@ -196,13 +196,13 @@ for g, t in zip(gs604, ts604):
                 fontsize=12, color=GREEN)
 a1.set_xticks([16, 32, 64, 128])
 a1.set_xticklabels(["16", "32", "64", "128"])
-a1.set_ylim(0.05, 0.25)
-a1.set_yticks([0.05, 0.10, 0.15, 0.20, 0.25])
-a1.set_yticklabels(["0.05", "0.10", "0.15", "0.20", "0.25"])
+a1.set_ylim(0, 0.25)
+a1.set_yticks([0, 0.05, 0.10, 0.15, 0.20, 0.25])
+a1.set_yticklabels(["0", "0.05", "0.10", "0.15", "0.20", "0.25"])
 a1.minorticks_off()
 a1.set_xlabel("Number of GPUs")
 a1.set_ylabel("Time per step (s)")
-a1.set_title("GPU strong scaling at three problem sizes")
+a1.set_title("LESGO-GPU strong scaling at three problem sizes")
 a1.legend(loc="upper right")
 a1.grid(True, axis="y")
 fig.tight_layout(pad=0.3)
@@ -222,7 +222,7 @@ a2.set_yticks([0, 0.05, 0.10, 0.15, 0.20])
 a2.set_yticklabels(["0", "0.05", "0.10", "0.15", "0.20"])
 a2.set_xlabel("Number of GPUs")
 a2.set_ylabel("Time per step (s)")
-a2.set_title("GPU weak scaling at three per-GPU loads")
+a2.set_title("LESGO-GPU weak scaling at three per-GPU loads")
 a2.legend(loc="center left")
 a2.grid(True, axis="y")
 fig.tight_layout(pad=0.3)
