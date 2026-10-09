@@ -76,7 +76,7 @@ for name, a in sorted(acc.items(), key=lambda kv: -kv[1]["t"]):
     #                 textcoords="offset points", ha="left", fontsize=10, color="#333333")
 
 ms = 0.8 * MS0 ** 0.5
-handles = [plt.Line2D([], [], ls="none", marker=MK[s], color=COL[s], ms=ms, label=s)
+handles = [plt.Line2D([], [], ls="none", marker=MK[s], color=COL[s], ms=ms, label="Others" if s == "Other" else s)
            for s in ["Derivatives", "SGS", "Convection", "Turbines", "Pressure",
                      "Projection", "Other"]]
 handles.append(plt.Line2D([], [], ls="none", marker="o", mfc="white", mec="black",
