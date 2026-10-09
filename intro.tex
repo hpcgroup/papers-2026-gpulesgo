@@ -51,22 +51,15 @@ not kernel throughput but data movement.
 Pseudo-spectral multiphysics LES has recurring host--device
 \emph{coupling points}, where host-side code must read or write
 device-resident state. They vary widely in how much of the field they
-touch and how often. The two data strategies common to directive-based ports both
-encounter severe limitations here. (1)~CUDA managed memory lets the driver
-migrate pages between host and device on demand~\cite{caplan2023dc}.
-This strategy requires the least porting effort, but it hides data
-movement from the source code and incurs page-migration
-overhead~\cite{chien2019um}.
-(2)~Array mirroring keeps a device copy of host
-array~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}. This strategy
-typically moves all computation to the GPU and returns full fields to
-the host only for diagnostics and checkpoints.
-However, in LESGO we find that some operations suit the CPU better, such as 
-the airfoil table lookups, and they read solver state every step. 
-Mirroring leaves open how to serve these host routines,
-and each full-field transfer stalls the GPU. Mirroring every
-array also consumes device memory, therefore it requires more GPUs for the
-same problem size.
+touch and how often. Directive-based ports commonly use CUDA managed
+memory~\cite{caplan2023dc} or array
+mirroring~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}, and
+both strategies encounter severe limitations here. Managed memory hides
+data movement from the source code and incurs page-migration
+overhead~\cite{chien2019um}. Mirroring works best when all computation
+runs on the GPU. In LESGO, however, some routines, such as the airfoil
+table lookups, suit the CPU better and should stay on the host for good
+performance.
 Thus, LESGO requires a fine-grained data
 residency strategy tailored to its host--device coupling points.
 
@@ -81,10 +74,9 @@ transfer altogether; \emph{slice} keeps a routine on the host when it
 suits the CPU better and touches only a small part of a field; 
 and \emph{overlap} keeps a routine on the host, and
 overlaps it with concurrent GPU execution. Beyond these treatments, we develop
-three optimizations for the remaining structural bottlenecks: chunk
-pipelining across serial process chains to hide inter-process
-communication delays in the distributed tridiagonal solve of the
-pressure equation, batching many small work items to mitigate kernel
+three optimizations for the remaining structural bottlenecks: chunk-based
+pipelining to break serial dependencies across processes,
+batching many small work items to mitigate kernel
 launch overhead, and CPU--GPU heterogeneous execution to overlap
 residual host physics with the GPU backlog.
 
