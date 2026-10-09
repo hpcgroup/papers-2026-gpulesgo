@@ -54,9 +54,8 @@ device-resident state. They vary widely in how much of the field they
 touch and how often. Directive-based ports commonly use CUDA managed
 memory~\cite{caplan2023dc} or array
 mirroring~\cite{esclapez2025dales,giorgetta2022,xiao2025cales}, and
-both strategies encounter severe limitations here. Managed memory hides
-data movement from the source code and incurs page-migration
-overhead~\cite{chien2019um}. Mirroring works best when all computation
+both strategies encounter severe limitations here. Managed memory lets the driver migrate
+pages between host and device, which could incur page-migration overhead~\cite{chien2019um}. Mirroring works best when all computation
 runs on the GPU. In LESGO, however, some routines, such as the airfoil
 table lookups, suit the CPU better and should stay on the host for good
 performance.
@@ -68,12 +67,11 @@ validated physics. We examine all host--device coupling points across
 the solver, classify them systematically, and present four
 treatments that together decide
 compute offloading and data movement: \emph{gate} skips a transfer
-whenever its conditional or infrequent host routine does not execute;
+when its host routine does not run;
 \emph{relocate} ports the host routine to the GPU and removes the
 transfer altogether; \emph{slice} keeps a routine on the host when it
 suits the CPU better and touches only a small part of a field; 
-and \emph{overlap} keeps a routine on the host, and
-overlaps it with concurrent GPU execution. Beyond these treatments, we develop
+and \emph{overlap} runs CPU and GPU computation concurrently. Beyond these treatments, we develop
 three optimizations for the remaining structural bottlenecks: chunk-based
 pipelining to break serial dependencies across processes,
 batching many small work items to mitigate kernel
