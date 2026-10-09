@@ -149,7 +149,7 @@ and kernel optimizations are effective and complement each other.
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling.pdf}
 \caption{Strong scaling of LESGO-GPU at three problem
-sizes. Labels on the 604M show the speedup over the fastest
+sizes. Labels on the 604M curve show the speedup over the fastest
 LESGO-CPU run (Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
 % \vspace{-0.1in}
@@ -205,7 +205,7 @@ Figure~\ref{fig:roofline} demonstrates the kernels of one production step on
 the roofline model~\cite{williams2009roofline}. Most kernels line up along the memory roof, and kernels
 that sustain more than 70\% of peak DRAM bandwidth account for 87\% of
 kernel time. 
-cuFFT kernels take 62\% of kernel time and run at 78\% of peak
+The cuFFT kernels take 62\% of kernel time and run at 78\% of peak
 bandwidth. Aggregated by stage,
 every stage except the turbines sustains 77--81\% of peak bandwidth. The only
 kernels well below the roof are the actuator-line kernels. We attribute this to their irregular access to grid cells around off-grid blade points.
