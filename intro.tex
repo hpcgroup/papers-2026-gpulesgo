@@ -67,7 +67,7 @@ validated physics. We examine all host--device coupling points across
 the solver, classify them systematically, and present four
 treatments that together decide
 compute offloading and data movement: \emph{gate} skips a transfer
-when its host routine does not run;
+when its conditional host routine does not run;
 \emph{relocate} ports the host routine to the GPU and removes the
 transfer altogether; \emph{slice} keeps a routine on the host when it
 suits the CPU better and touches only a small part of a field; 
