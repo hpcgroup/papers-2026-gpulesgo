@@ -11,9 +11,9 @@ multi-physics solvers, recurring host--device data movement rather
 than kernel throughput governs overall performance. We analyze all host--device
 coupling points across the solver, classify them, and present four
 treatments that together decide compute offloading and data movement. On
-this foundation, we propose several optimizations, including chunk pipelining
-across serial process chains, batching many small work items, and heterogeneous
+this foundation, we propose several optimizations, including chunk-based pipelining
+across serial dependencies, batching small work items together, and heterogeneous
 CPU--GPU execution.  Evaluation on a 60-turbine wind farm discretized into 604 million cells
 demonstrates a 40$\times$ speedup over the best-performing CPU baseline at
-equal node count, rising to 90$\times$ on 64 GPUs, and strong scaling to
+the same node count, rising to 90$\times$ on 64 GPUs, and strong scaling to
 128 GPUs on a 1.36-billion-cell grid.
