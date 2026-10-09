@@ -1,7 +1,7 @@
 
 This section first validates the GPU port against the CPU version and
 then evaluates solver performance on the production wind-farm
-benchmark. We present cumulative speedups and analyze strong and weak
+problem. We present cumulative speedups and analyze strong and weak
 scaling behavior.
 
 \subsection{Validation of the GPU Port}
@@ -9,9 +9,9 @@ scaling behavior.
 
 
 We now verify that the GPU port reproduces
-the results of the CPU version. We use a small case with one NREL 5-MW
+the results of the CPU version. We use a small problem with one NREL 5-MW
 turbine, modeled by a panel-based actuator-line method with 120
-actuator points per blade, and we disable both the SGS model and
+actuator points per blade, and we disable the SGS model and
 molecular viscosity. The CPU and GPU runs share the same cold start,
 $480\times384\times240$ grid, fixed nondimensional time step
 $\Delta t=0.0014$, and 1,000 steps. The CPU run uses 48 MPI processes,
@@ -48,7 +48,7 @@ that the GPU port preserves the numerical behavior of the CPU version.
 \begin{table}[h]
 \centering
 \caption{Cumulative speedup from optimizations on 4 GPU nodes, 16 A100 GPUs for the
-production benchmark (604M cells, 60 turbines) against the fastest
+production problem (604M cells, 60 turbines) against the fastest
 CPU baseline (4 CPU nodes, Fig.~\ref{fig:ceiling}).}
 \label{tab:cumulative}
 \footnotesize
@@ -106,7 +106,7 @@ $39.7\times$ speedup.
 
 \begin{table}[h]
     \centering
-    \caption{Execution profile of the final port on the production case
+    \caption{Execution profile of the final port on the production problem
     (16 A100 GPUs, \texttt{nsys}/\texttt{ncu}, per step).}
     \label{tab:finalmetrics}
     \footnotesize

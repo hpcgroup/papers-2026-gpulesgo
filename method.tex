@@ -92,7 +92,7 @@ code changes, so we begin with them.
 \noindent\textbf{CUDA Managed Memory.} We first try CUDA managed memory~\cite{caplan2023dc}, which
 lets the driver migrate pages between host and device on demand and
 requires the least porting effort. We build LESGO with
-\texttt{-gpu=mem:managed} and run the production benchmark
+\texttt{-gpu=mem:managed} and run the production problem
 (Section~\ref{sec:setup}) on 16 A100 GPUs. For this implementation,
 \texttt{Nsight Systems} profiling shows that page faults and on-demand
 data migration, which are inherent to demand-paged unified
@@ -114,12 +114,12 @@ routines run slower on the GPU than on the CPU. These routines should
 therefore remain on the host.
 Mirroring consequently transfers full fields at every step
 wherever these host routines access solver state. 
-On our reference configuration ($256^3$ grid with two
-wind turbines on 4 A100 GPUs), profiling shows that the
+For a small problem ($256^3$ grid with two
+wind turbines) on 4 A100 GPUs, profiling shows that the
 GPU computes for only 6\% of each time step, while host--device
 transfers take most of the rest. In fact, these
 transfers are largely wasted, because the host needs only a small part
-of each array rather than the whole field.
+of each array.
 
 Both evaluations show that achieving high GPU efficiency requires
 fine-grained control over data residency and host--device transfer
@@ -269,4 +269,4 @@ transfers about 1\,KB in each direction. All other operations on \texttt{p}, inc
 exchange with the neighboring process, run on the GPU, so the rest of
 \texttt{p} never leaves the device. As shown in
 Table~\ref{tab:finalmetrics}, profiling confirms that only minimal
-host--device data transfer remains on the production benchmark. 
+host--device data transfer remains on the production problem. 

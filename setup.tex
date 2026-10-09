@@ -5,7 +5,7 @@ and CUDA-aware Cray MPICH 9.1.0. CPU baselines run on
 Perlmutter CPU nodes with two 64-core AMD EPYC 7763 (Milan) CPUs each.
 
 \vspace{0.05in}
-\noindent\textbf{Input Problems.} The production case (``wf60'') is a 60-turbine wind
+\noindent\textbf{Input Problems.} The production problem (``wf60'') is a 60-turbine wind
 farm of NREL 5-MW reference turbines~\cite{jonkman2009} in a
 $10\times6$ array with $7D$ streamwise and $5D$ spanwise spacing
 ($D=126$\,m), in a $28.2 \times 3.8 \times 2.0$\,km domain discretized
@@ -13,7 +13,7 @@ by $3072\times384\times512 \approx 604$M grid points, with the equilibrium wall 
 Since the LASD update depends on the user-chosen cadence $q$, we disable it in this section. We separately
 report the performance with the LASD model enabled in
 Table~\ref{tab:cumulative}.
-Table~\ref{tab:cases} lists the scaling series. Strong scaling runs
+Table~\ref{tab:cases} lists the input problems of the scaling experiments. Strong scaling runs
 the same farm at 512, 768, and 1152 vertical levels (604M, 906M, and
 1.36B cells), refining the wall-layer and wake resolution. Weak scaling
 fixes the per-GPU grid at three loads and grows the vertical extent with

@@ -151,7 +151,7 @@ processes each turbine spans for per-turbine force aggregation.
     \vspace{-0.05in}
     \centering
     \includegraphics[width=\linewidth]{figs/fig_ceiling.pdf}
-    \caption{Strong scaling of the CPU-only parallel version of LESGO on the production case (Section~\ref{sec:setup}). 
+    \caption{Strong scaling of the CPU-only parallel version of LESGO on the production problem (Section~\ref{sec:setup}). 
     The $\times$ is the data point at 128 processes on a single node, where the code runs out of memory.}
     \label{fig:ceiling}
     \vspace{-0.05in}
@@ -160,7 +160,7 @@ processes each turbine spans for per-turbine force aggregation.
 
 On CPU architectures, this design encounters severe scaling limits.
 Figure~\ref{fig:ceiling} evaluates the strong scaling of the production
-wind-farm case, which simulates 60 turbines on a 604M-cell grid
+wind-farm problem, which simulates 60 turbines on a 604M-cell grid
 ($3072 \times 384 \times 512$), on Perlmutter CPU nodes with
 two 64-core AMD EPYC 7763 (Milan) CPUs each.
 As shown in Fig.~\ref{fig:ceiling}, increasing the process count

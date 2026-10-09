@@ -92,7 +92,7 @@ ax.set_xlim(15, 512)
 ax.set_ylim(0.1, 20)
 ax.set_xlabel("Number of processes")
 ax.set_ylabel("Time per step (s)")
-ax.set_title("Strong scaling of the wf60 configuration on CPU nodes")
+ax.set_title("Strong scaling of the production problem on CPU nodes")
 ax.grid(True, which="major", axis="y")
 ax.legend(loc="lower left", bbox_to_anchor=(0.0, 0.10),
           handletextpad=0.4, borderaxespad=0.2)

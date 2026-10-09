@@ -73,7 +73,7 @@ ax.set_ylim(0, 180)
 ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
 ax.set_xlabel("Number of GPUs")
 ax.set_ylabel("Time per step (ms)")
-ax.set_title("Device time by stage on the 604M-cell case")
+ax.set_title("Device time by stage on the 604M-cell grid")
 ax.grid(True, axis="y")
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles[::-1], labels[::-1], loc="upper right", ncol=2,
