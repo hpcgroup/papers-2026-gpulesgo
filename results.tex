@@ -37,17 +37,17 @@ that the GPU port preserves the numerical behavior of the CPU version.
     \includegraphics[width=1\columnwidth]{figs/fig_cpu_gpu_lesgo_centerline.pdf}
     \caption{Hub-height centerline profiles of $u/U_\infty$ from the CPU
     and GPU runs of Fig.~\ref{fig:lesgo-cpu-gpu-field}. The two curves
-    coincide.}
+    fully coincide.}
     \label{fig:lesgo-cpu-gpu}
     \vspace{-0.1in}
 \end{figure}
 
-\subsection{Performance Impact of Optimizations}
+\subsection{Performance Impact of Different Optimizations}
 \label{sec:results-opt}
 
 \begin{table}[h]
 \centering
-\caption{Cumulative speedup of optimizations on 4 GPU nodes, 16 A100 GPUs for the
+\caption{Cumulative speedup from optimizations on 4 GPU nodes, 16 A100 GPUs for the
 production benchmark (604M cells, 60 turbines) against the fastest
 CPU baseline (4 CPU nodes, Fig.~\ref{fig:ceiling}).}
 \label{tab:cumulative}
@@ -107,7 +107,7 @@ $39.7\times$ speedup.
 \begin{table}[h]
     \centering
     \caption{Execution profile of the final port on the production case
-    (16$\times$A100, \texttt{nsys}/\texttt{ncu}, per step).}
+    (16 A100 GPUs, \texttt{nsys}/\texttt{ncu}, per step).}
     \label{tab:finalmetrics}
     \footnotesize
     \begin{tabular}{@{}lr@{}}
@@ -134,7 +134,7 @@ kernels also make good use of DRAM bandwidth
 and kernel optimizations are effective and complement each other.
 
 
-\subsection{Strong and Weak Scaling}
+\subsection{Strong and Weak Scaling Performance}
 \label{sec:results-scaling}
 
 % We evaluate strong scaling across three problem sizes, analyze stage-by-stage
@@ -145,7 +145,7 @@ and kernel optimizations are effective and complement each other.
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling.pdf}
 \caption{Strong scaling of LESGO at three problem
-sizes. Labels on the 604M give the speedup over the fastest CPU
+sizes. Labels on the 604M show the speedup over the fastest CPU
 configuration (6.48\,s per step, Fig.~\ref{fig:ceiling}).}
 \label{fig:scaling}
 \vspace{-0.1in}
@@ -163,7 +163,7 @@ configuration (Table~\ref{tab:cumulative}).
     \vspace{-0.05in}
     \centering
     \includegraphics[width=\linewidth]{figs/fig_stagescale.pdf}
-    \caption{Breakdown of GPU LESGO step time by stage on the 604M-cell
+    \caption{Breakdown of LESGO-GPU step time by stage on the 604M-cell
     grid. \texttt{Others} is the rest of the measured step time.}
     % \texttt{Other} includes the velocity projection and the routines elided
     % in Algorithm~\ref{alg:step}.}
@@ -191,7 +191,7 @@ host time appears in \texttt{Others}.
 \begin{figure}[h]
 \centering
 \includegraphics[width=\linewidth]{figs/fig_roofline.pdf}
-\caption{Roofline of the LESGO kernels. Colors give the stage in Algorithm~\ref{alg:step},
+\caption{Roofline plot showing several important LESGO kernels. Colors give the stage in Algorithm~\ref{alg:step},
 and open circles mark cuFFT kernels, which serve several stages.}
 \label{fig:roofline}
 \vspace{-0.1in}
@@ -213,7 +213,7 @@ negligible.
     \vspace{-0.05in}
 \centering
 \includegraphics[width=\linewidth]{figs/fig_scaling_weak.pdf}
-\caption{Weak scaling at three per-GPU loads on Perlmutter.}
+\caption{Weak scaling of LESGO-GPU for three problem sizes on Perlmutter.}
 \label{fig:weakscaling}
 \vspace{-0.05in}
 \end{figure}

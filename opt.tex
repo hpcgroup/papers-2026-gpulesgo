@@ -42,7 +42,7 @@ arithmetic~\cite{laszlo2016,kim2021pascal}, our approach leaves the
 inner Thomas loops untouched, so the results match the sequential
 solve.
 
-\subsection{Batching Many Small Work Items}
+\subsection{Batching Small Work Items Together}
 \label{sec:opt-batch}
 
 In the solver, many components decompose into small, independent work
@@ -96,7 +96,7 @@ computation. We accordingly keep this routine on the host.
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/fig_overlap.pdf}
-    \caption{Heterogeneous overlap of the actuator-line model. }
+    \caption{Splitting the actuator-line model into two phases to enable CPU-GPU computation overlap.}
     \label{fig:overlap}
     \vspace{-0.1in}
 \end{figure}
@@ -124,23 +124,22 @@ later.
     \centering
     \includegraphics[width=0.98\linewidth]{figs/fig_cpu_gpu_lesgo_fields.pdf}
     \vspace{-0.1in}
-    \caption{Matched CPU and GPU runs of one NREL 5-MW turbine after
+    \caption{Validation of a GPU run against a CPU run for one NREL 5-MW turbine after
     1,000 steps. (a),~(b)~Normalized axial velocity $u/U_\infty$ on the
-    vertical rotor-center plane, same color scale. (c)~GPU-minus-CPU
-    difference, which stays at roundoff scale ($\sim\!10^{-14}$).}
+    vertical rotor-center plane, same color scale. (c) Difference of GPU--CPU, which stays at roundoff scale ($\sim\!10^{-14}$).}
     \label{fig:lesgo-cpu-gpu-field}
     \vspace{-0.1in}
 \end{figure*}
 
 
-\subsection{Experiences Porting to Modern GPUs}
+\subsection{Best Practices for Porting to Modern GPUs}
 \label{sec:opt-impl}
 
 Beyond the optimizations above, we identified three practices from
 our porting effort that apply to directive-based GPU codes in general.
 
 \vspace{0.08in}
-\textbf{Compute Uniformly, Then Patch the Exceptions.} Branch
+\noindent\textbf{Compute Uniformly, Then Patch the Exceptions.} Branch
 divergence within a warp forces a hot kernel to execute the divergent
 paths serially. When the exceptional points form a lower-dimensional
 subset of the iteration space, such as $O(N_xN_y)$ boundary cells
@@ -152,7 +151,7 @@ smaller kernel. The redundant computation on boundary cells is
 negligible relative to the volume computation.
 
 \vspace{0.08in}
-\textbf{Derive the Parallel Domain from the Data, Not the Loop Nest.}
+\noindent\textbf{Derive the Parallel Domain from the Data, Not the Loop Nest.}
 A GPU kernel translated directly from a CPU loop nest inherits the loop
 structure of the original code, which typically results in low
 occupancy and strided memory access. We instead derive the thread
@@ -166,7 +165,7 @@ thread, so that a single kernel exposes the parallelism of all
 instances at once.
 
 \vspace{0.08in}
-\textbf{Align Code Structure with Compiler Offloading Models.} The
+\noindent\textbf{Align Code Structure with Compiler Offloading Models.} The
 NVHPC compiler places small local arrays in thread-private local
 memory, which resides in device DRAM and is substantially slower than
 registers. We apply scalar replacement to these arrays, which allows
